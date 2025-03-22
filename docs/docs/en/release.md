@@ -12,6 +12,74 @@ hide:
 ---
 
 # Release Notes
+## 0.5.36
+
+### What's Changed
+
+* fix #2088: respect parsed sasl_mechanism by [@Lancetnik](https://github.com/Lancetnik){.external-link target="_blank"} in [#2092](https://github.com/airtai/faststream/pull/2092){.external-link target="_blank"}
+* Add delay to unassigned consumer warning by @Arseniy-Popov in [#2090](https://github.com/airtai/faststream/pull/2090){.external-link target="_blank"}
+* fix: resolve forward refs in FastAPI integration by [@Lancetnik](https://github.com/Lancetnik){.external-link target="_blank"} in [#2096](https://github.com/airtai/faststream/pull/2096){.external-link target="_blank"}
+* fix: unwrap handler function when getting dependant by @Yakov-Varnaev in [#2093](https://github.com/airtai/faststream/pull/2093){.external-link target="_blank"}
+* fix: make `CriticalLogMiddleware` respect broker log level (#2130) by [@fadedDexofan](https://github.com/fadedDexofan){.external-link target="_blank"} in [#2131](https://github.com/airtai/faststream/pull/2131){.external-link target="_blank"}
+* Fixed nested dataclasses schema generation by [@NelsonNotes](https://github.com/NelsonNotes){.external-link target="_blank"} in [#2097](https://github.com/airtai/faststream/pull/2097){.external-link target="_blank"}
+* refactoring ConfluentConfig by [@diskream](https://github.com/diskream){.external-link target="_blank"} in [#2098](https://github.com/airtai/faststream/pull/2098){.external-link target="_blank"}
+* refactored subscription Annotation Serialization by [@MaximGit1](https://github.com/MaximGit1){.external-link target="_blank"} in [#2112](https://github.com/airtai/faststream/pull/2112){.external-link target="_blank"}
+* docs: added pros and cons to publishers page by [@0xWEBMILK](https://github.com/0xWEBMILK){.external-link target="_blank"} in [#2103](https://github.com/airtai/faststream/pull/2103){.external-link target="_blank"}
+* docs: follow off logging recommendations by [@guitvcer](https://github.com/guitvcer){.external-link target="_blank"} in [#2127](https://github.com/airtai/faststream/pull/2127){.external-link target="_blank"}
+* docs: add example for probes by [@Sehat1137](https://github.com/Sehat1137){.external-link target="_blank"} in [#2108](https://github.com/airtai/faststream/pull/2108){.external-link target="_blank"}
+* docs: fix footer after gurubase integration by [@Rusich90](https://github.com/Rusich90){.external-link target="_blank"} in [#2120](https://github.com/airtai/faststream/pull/2120){.external-link target="_blank"}
+* docs: Toggle Gurubase widget theme by [@bshelkhonov](https://github.com/bshelkhonov){.external-link target="_blank"} in [#2117](https://github.com/airtai/faststream/pull/2117){.external-link target="_blank"}
+* docs(#2109): Inlines the include files directly into the location where it is used(faststream.md, scheduling.md) by [@MaestroXXXVIII](https://github.com/MaestroXXXVIII){.external-link target="_blank"} in [#2113](https://github.com/airtai/faststream/pull/2113){.external-link target="_blank"}
+* docs(#2109): "getting-started/subscription" section has been updated by [@MaximGit1](https://github.com/MaximGit1){.external-link target="_blank"} in [#2114](https://github.com/airtai/faststream/pull/2114){.external-link target="_blank"}
+* docs(#2109): make PR reference by [@Lancetnik](https://github.com/Lancetnik){.external-link target="_blank"} in [#2111](https://github.com/airtai/faststream/pull/2111){.external-link target="_blank"}
+* docs(#2109): inline includes getting-started/lifespan by [@Sabfo](https://github.com/Sabfo){.external-link target="_blank"} in [#2115](https://github.com/airtai/faststream/pull/2115){.external-link target="_blank"}
+* docs(#2109): inline includes getting-started/dependencies by [@Sabfo](https://github.com/Sabfo){.external-link target="_blank"} in [#2116](https://github.com/airtai/faststream/pull/2116){.external-link target="_blank"}
+* docs(#2109): inline includes getting-started/serialization/decoder.md by @s-v-y-a-t in [#2118](https://github.com/airtai/faststream/pull/2118){.external-link target="_blank"}
+* docs(#2109): deleted include code in getting_started/index by [@RenameMe1](https://github.com/RenameMe1){.external-link target="_blank"} in [#2119](https://github.com/airtai/faststream/pull/2119){.external-link target="_blank"}
+* docs(#2109): Docs/include inline by @close2code-palm in [#2123](https://github.com/airtai/faststream/pull/2123){.external-link target="_blank"}
+* docs(#2109): deleted include code in getting_started/opentelemetry by [@RenameMe1](https://github.com/RenameMe1){.external-link target="_blank"} in [#2125](https://github.com/airtai/faststream/pull/2125){.external-link target="_blank"}
+* docs(#2109): deleted include code in getting_started/prometheus by [@RenameMe1](https://github.com/RenameMe1){.external-link target="_blank"} in [#2124](https://github.com/airtai/faststream/pull/2124){.external-link target="_blank"}
+* docs(#2109): inline includes getting-started/integrations by [@TurtleOld](https://github.com/TurtleOld){.external-link target="_blank"} in [#2121](https://github.com/airtai/faststream/pull/2121){.external-link target="_blank"}
+* docs(#2109): remove docs includes context, serialization, publishing by [@TurtleOld](https://github.com/TurtleOld){.external-link target="_blank"} in [#2126](https://github.com/airtai/faststream/pull/2126){.external-link target="_blank"}
+
+### New Contributors
+* [@NelsonNotes](https://github.com/NelsonNotes){.external-link target="_blank"} made their first contribution in [#2097](https://github.com/airtai/faststream/pull/2097){.external-link target="_blank"}
+* [@diskream](https://github.com/diskream){.external-link target="_blank"} made their first contribution in [#2098](https://github.com/airtai/faststream/pull/2098){.external-link target="_blank"}
+* [@MaximGit1](https://github.com/MaximGit1){.external-link target="_blank"} made their first contribution in [#2112](https://github.com/airtai/faststream/pull/2112){.external-link target="_blank"}
+* [@MaestroXXXVIII](https://github.com/MaestroXXXVIII){.external-link target="_blank"} made their first contribution in [#2113](https://github.com/airtai/faststream/pull/2113){.external-link target="_blank"}
+* [@Sabfo](https://github.com/Sabfo){.external-link target="_blank"} made their first contribution in [#2115](https://github.com/airtai/faststream/pull/2115){.external-link target="_blank"}
+* @s-v-y-a-t made their first contribution in [#2118](https://github.com/airtai/faststream/pull/2118){.external-link target="_blank"}
+* [@bshelkhonov](https://github.com/bshelkhonov){.external-link target="_blank"} made their first contribution in [#2117](https://github.com/airtai/faststream/pull/2117){.external-link target="_blank"}
+* [@RenameMe1](https://github.com/RenameMe1){.external-link target="_blank"} made their first contribution in [#2119](https://github.com/airtai/faststream/pull/2119){.external-link target="_blank"}
+* @close2code-palm made their first contribution in [#2123](https://github.com/airtai/faststream/pull/2123){.external-link target="_blank"}
+* [@TurtleOld](https://github.com/TurtleOld){.external-link target="_blank"} made their first contribution in [#2121](https://github.com/airtai/faststream/pull/2121){.external-link target="_blank"}
+* [@guitvcer](https://github.com/guitvcer){.external-link target="_blank"} made their first contribution in [#2127](https://github.com/airtai/faststream/pull/2127){.external-link target="_blank"}
+* [@fadedDexofan](https://github.com/fadedDexofan){.external-link target="_blank"} made their first contribution in [#2131](https://github.com/airtai/faststream/pull/2131){.external-link target="_blank"}
+
+**Full Changelog**: [#0.5.35...0.5.36](https://github.com/airtai/faststream/compare/0.5.35...0.5.36){.external-link target="_blank"}
+
+## 0.5.35
+
+### What's Changed
+
+* Add concurrent-between-partitions kafka subscriber by @Arseniy-Popov in [#2017](https://github.com/airtai/faststream/pull/2017){.external-link target="_blank"}
+* chore: make uv sync working by [@Lancetnik](https://github.com/Lancetnik){.external-link target="_blank"} in [#2041](https://github.com/airtai/faststream/pull/2041){.external-link target="_blank"}
+* docs: add Ask AI button with Gurubase widget by [@Lancetnik](https://github.com/Lancetnik){.external-link target="_blank"} in [#2042](https://github.com/airtai/faststream/pull/2042){.external-link target="_blank"}
+* docs: create FastStream image shield by [@Lancetnik](https://github.com/Lancetnik){.external-link target="_blank"} in [#2062](https://github.com/airtai/faststream/pull/2062){.external-link target="_blank"}
+* Close #2060 by [@Flosckow](https://github.com/Flosckow){.external-link target="_blank"} in [#2063](https://github.com/airtai/faststream/pull/2063){.external-link target="_blank"}
+* feat: allow broker setting in on_startup hook by @Yakov-Varnaev in [#2073](https://github.com/airtai/faststream/pull/2073){.external-link target="_blank"}
+* ImportError raises change by [@0xWEBMILK](https://github.com/0xWEBMILK){.external-link target="_blank"} in [#2080](https://github.com/airtai/faststream/pull/2080){.external-link target="_blank"}
+* docs: Fix distributed spelling error in task scheduling page by [@Sandldan](https://github.com/Sandldan){.external-link target="_blank"} in [#2081](https://github.com/airtai/faststream/pull/2081){.external-link target="_blank"}
+* Exclude confluent-kafka 2.8.1 by @Yakov-Varnaev in [#2084](https://github.com/airtai/faststream/pull/2084){.external-link target="_blank"}
+
+### New Contributors
+* @Arseniy-Popov made their first contribution in [#2017](https://github.com/airtai/faststream/pull/2017){.external-link target="_blank"}
+* @Yakov-Varnaev made their first contribution in [#2073](https://github.com/airtai/faststream/pull/2073){.external-link target="_blank"}
+* [@0xWEBMILK](https://github.com/0xWEBMILK){.external-link target="_blank"} made their first contribution in [#2080](https://github.com/airtai/faststream/pull/2080){.external-link target="_blank"}
+* [@Sandldan](https://github.com/Sandldan){.external-link target="_blank"} made their first contribution in [#2081](https://github.com/airtai/faststream/pull/2081){.external-link target="_blank"}
+
+**Full Changelog**: [#0.5.34...0.5.35](https://github.com/airtai/faststream/compare/0.5.34...0.5.35){.external-link target="_blank"}
+
 ## 0.5.34
 
 ### What's Changed
