@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
 
     from faststream._internal.basic_types import AnyDict, Decorator
+    from faststream._internal.broker import BrokerConfig
     from faststream._internal.context.repository import ContextRepo
     from faststream._internal.endpoint.call_wrapper import HandlerCallWrapper
     from faststream._internal.endpoint.publisher import BasePublisherProto
@@ -67,10 +68,8 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
 
     lock: "AbstractContextManager[Any]"
     extra_watcher_options: "AnyDict"
-    extra_context: "AnyDict"
     graceful_timeout: Optional[float]
 
-    _broker_dependencies: Iterable["Dependant"]
     _call_options: Optional["_CallOptions"]
     _call_decorators: Iterable["Decorator"]
 
@@ -78,9 +77,9 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         """Initialize a new instance of the class."""
         self.calls = []
 
-        self._parser = config.default_parser
-        self._decoder = config.default_decoder
         self._no_reply = config.no_reply
+        self._parser = config.parser
+        self._decoder = config.decoder
         self.ack_policy = config.ack_policy
 
         self._call_options = None
@@ -89,63 +88,54 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         self.running = False
         self.lock = sync_fake_context()
 
-        # Setup in include
-        self._broker_dependencies = config.broker_dependencies
-        self._broker_middlewares = config.broker_middlewares
+        # Setup in registration
+        self._outer_config = config.config
 
-        # register in setup later
-        self.extra_context = {}
         self.extra_watcher_options = {}
 
-    def add_middleware(self, middleware: "BrokerMiddleware[MsgType]") -> None:
-        self._broker_middlewares = (*self._broker_middlewares, middleware)
+    @property
+    def _broker_middlewares(self) -> Sequence["BrokerMiddleware[MsgType]"]:
+        return self._outer_config.broker_middlewares
+
+    def register(self, config: "BrokerConfig", /) -> None:
+        self._outer_config = final_config = config | self._outer_config
+
+        self.include_in_schema = final_config.include_in_schema
+
+    def _post_start(self) -> None:
+        self.lock = MultiLock()
+        self.running = True
 
     @override
     def _setup(
         self,
         *,
-        extra_context: "AnyDict",
-        # broker options
-        broker_parser: Optional["CustomCallable"],
-        broker_decoder: Optional["CustomCallable"],
-        # dependant args
         state: "Pointer[BrokerState]",
     ) -> None:
         # TODO: add EmptyBrokerState to init
+
         self._state = state
 
-        self.extra_context = extra_context
-
         for call in self.calls:
-            if parser := call.item_parser or broker_parser:
-                async_parser = resolve_custom_func(to_async(parser), self._parser)
+            if parser := call.item_parser or self._outer_config.broker_parser:
+                async_parser = resolve_custom_func(parser, self._parser)
             else:
                 async_parser = self._parser
 
-            if decoder := call.item_decoder or broker_decoder:
-                async_decoder = resolve_custom_func(to_async(decoder), self._decoder)
+            if decoder := call.item_decoder or self._outer_config.broker_decoder:
+                async_decoder = resolve_custom_func(decoder, self._decoder)
             else:
                 async_decoder = self._decoder
-
-            self._parser = async_parser
-            self._decoder = async_decoder
 
             call._setup(
                 parser=async_parser,
                 decoder=async_decoder,
                 state=state,
-                broker_dependencies=self._broker_dependencies,
+                broker_dependencies=self._outer_config.broker_dependencies,
                 _call_decorators=self._call_decorators,
             )
 
             call.handler.refresh(with_mock=False)
-
-    @abstractmethod
-    async def start(self) -> None:
-        """Start the handler."""
-        self.lock = MultiLock()
-
-        self.running = True
 
     @abstractmethod
     async def close(self) -> None:
@@ -155,7 +145,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         """
         self.running = False
         if isinstance(self.lock, MultiLock):
-            await self.lock.wait_release(self._state.get().graceful_timeout)
+            await self.lock.wait_release(self._outer_config.graceful_timeout)
 
     def add_call(
         self,
@@ -312,7 +302,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
 
             # Enter context before middlewares
             stack.enter_context(context.scope("logger", logger_state.logger.logger))
-            for k, v in self.extra_context.items():
+            for k, v in self._outer_config.extra_context.items():
                 stack.enter_context(context.scope(k, v))
 
             # enter all middlewares

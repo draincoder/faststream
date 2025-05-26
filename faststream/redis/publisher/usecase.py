@@ -7,7 +7,6 @@ from typing_extensions import override
 
 from faststream._internal.endpoint.publisher import PublisherUsecase
 from faststream.message import gen_cor_id
-from faststream.redis.configs import RedisPublisherConfig
 from faststream.redis.message import UnifyRedisDict
 from faststream.redis.response import RedisPublishCommand
 from faststream.response.publish_type import PublishType
@@ -15,6 +14,7 @@ from faststream.response.publish_type import PublishType
 if TYPE_CHECKING:
     from faststream._internal.basic_types import AnyDict, SendableMessage
     from faststream._internal.types import PublisherMiddleware
+    from faststream.redis.configs import RedisPublisherConfig
     from faststream.redis.message import RedisMessage
     from faststream.redis.publisher.producer import RedisFastProducer
     from faststream.redis.schemas import ListSub, PubSub, StreamSub

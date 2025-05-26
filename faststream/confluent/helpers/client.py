@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import NotRequired, TypedDict
 
     from faststream._internal.basic_types import AnyDict
-    from faststream._internal.state.logger import LoggerState
+    from faststream._internal.logger import LoggerState
 
     from .admin import AdminService
 

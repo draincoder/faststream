@@ -15,6 +15,7 @@ from faststream.response.response import PublishCommand
 
 if TYPE_CHECKING:
     from faststream._internal.basic_types import SendableMessage
+    from faststream._internal.broker import BrokerConfig
     from faststream._internal.producer import ProducerProto
     from faststream._internal.state import BrokerState, Pointer
     from faststream._internal.types import (
@@ -75,8 +76,7 @@ class PublisherProto(
     @abstractmethod
     def _producer(self) -> "ProducerProto": ...
 
-    @abstractmethod
-    def add_middleware(self, middleware: "BrokerMiddleware[MsgType]") -> None: ...
+    def register(self, config: "BrokerConfig", /) -> None: ...
 
     @abstractmethod
     def _setup(

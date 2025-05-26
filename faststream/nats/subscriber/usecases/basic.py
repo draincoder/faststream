@@ -23,9 +23,6 @@ from faststream.nats.subscriber.state import (
 )
 
 if TYPE_CHECKING:
-    from faststream._internal.basic_types import (
-        AnyDict,
-    )
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.producer import ProducerProto
     from faststream._internal.state import (
@@ -73,8 +70,6 @@ class LogicSubscriber(SubscriberUsecase[MsgType]):
         connection_state: "BrokerState",
         os_declarer: "OSBucketDeclarer",
         kv_declarer: "KVBucketDeclarer",
-        # basic args
-        extra_context: "AnyDict",
         # broker options
         broker_parser: Optional["CustomCallable"],
         broker_decoder: Optional["CustomCallable"],
@@ -88,7 +83,6 @@ class LogicSubscriber(SubscriberUsecase[MsgType]):
         )
 
         super()._setup(
-            extra_context=extra_context,
             broker_parser=broker_parser,
             broker_decoder=broker_decoder,
             state=state,

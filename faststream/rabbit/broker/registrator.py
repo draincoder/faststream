@@ -128,19 +128,19 @@ class RabbitRegistrator(ABCBroker["IncomingMessage"]):
                     ack_policy=ack_policy,
                     no_ack=no_ack,
                     no_reply=no_reply,
-                    broker_middlewares=self.middlewares,
-                    broker_dependencies=self._dependencies,
-                    # AsyncAPI
+                    # broker args
+                    config=self.config,
+                    # specification args
                     title_=title,
                     description_=description,
-                    include_in_schema=self._solve_include_in_schema(include_in_schema),
+                    include_in_schema=include_in_schema,
                 ),
             ),
         )
 
         return subscriber.add_call(
-            parser_=parser or self._parser,
-            decoder_=decoder or self._decoder,
+            parser_=parser,
+            decoder_=decoder,
             dependencies_=dependencies,
             middlewares_=middlewares,
         )
@@ -310,14 +310,15 @@ class RabbitRegistrator(ABCBroker["IncomingMessage"]):
                     queue=RabbitQueue.validate(queue),
                     exchange=RabbitExchange.validate(exchange),
                     message_kwargs=message_kwargs,
-                    # Specific
-                    broker_middlewares=self.middlewares,
+                    # publisher args
                     middlewares=middlewares,
-                    # AsyncAPI
+                    # broker args
+                    config=self.config,
+                    # specification args
                     title_=title,
                     description_=description,
                     schema_=schema,
-                    include_in_schema=self._solve_include_in_schema(include_in_schema),
+                    include_in_schema=include_in_schema,
                 ),
             ),
         )

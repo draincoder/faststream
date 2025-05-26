@@ -24,10 +24,6 @@ from starlette.routing import BaseRoute, _DefaultLifespan
 
 from faststream._internal.application import StartAbleApplication
 from faststream._internal.broker.router import BrokerRouter
-from faststream._internal.fastapi.get_dependant import get_fastapi_dependant
-from faststream._internal.fastapi.route import (
-    wrap_callable_to_fastapi_compatible,
-)
 from faststream._internal.types import (
     MsgType,
     P_HandlerParams,

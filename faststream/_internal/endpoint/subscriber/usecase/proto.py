@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections.abc import AsyncIterator, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Optional
 
-from typing_extensions import Self
+from typing_extensions import ReadOnly, Self
 
 from faststream._internal.endpoint.usecase import Endpoint
 from faststream._internal.types import MsgType
@@ -10,7 +10,7 @@ from faststream._internal.types import MsgType
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
 
-    from faststream._internal.basic_types import AnyDict
+    from faststream._internal.broker import BrokerConfig
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.endpoint.subscriber.call_item import HandlerItem
     from faststream._internal.producer import ProducerProto
@@ -28,12 +28,11 @@ class SubscriberProto(Endpoint[MsgType]):
     calls: list["HandlerItem[MsgType]"]
     running: bool
 
-    _broker_dependencies: Iterable["Dependant"]
-    _broker_middlewares: Sequence["BrokerMiddleware[MsgType]"]
     _producer: Optional["ProducerProto"]
 
-    @abstractmethod
-    def add_middleware(self, middleware: "BrokerMiddleware[MsgType]") -> None: ...
+    _broker_middlewares: ReadOnly[Sequence["BrokerMiddleware[MsgType]"]]
+
+    def register(self, config: "BrokerConfig", /) -> None: ...
 
     @abstractmethod
     def get_log_context(
@@ -46,11 +45,6 @@ class SubscriberProto(Endpoint[MsgType]):
     def _setup(
         self,
         *,
-        extra_context: "AnyDict",
-        # broker options
-        broker_parser: Optional["CustomCallable"],
-        broker_decoder: Optional["CustomCallable"],
-        # dependant args
         state: "Pointer[BrokerState]",
     ) -> None: ...
 

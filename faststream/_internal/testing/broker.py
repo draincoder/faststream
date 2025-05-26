@@ -14,8 +14,7 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 from faststream._internal.broker.broker import BrokerUsecase
-from faststream._internal.endpoint.subscriber.utils import MultiLock
-from faststream._internal.state.logger.logger_proxy import RealLoggerObject
+from faststream._internal.logger.logger_proxy import RealLoggerObject
 from faststream._internal.testing.app import TestApp
 from faststream._internal.testing.ast import is_contains_context_name
 from faststream._internal.utils.functions import sync_fake_context
@@ -23,7 +22,7 @@ from faststream._internal.utils.functions import sync_fake_context
 if TYPE_CHECKING:
     from types import TracebackType
 
-    from faststream._internal.endpoint.subscriber.proto import SubscriberProto
+    from faststream._internal.endpoint.subscriber import SubscriberProto
 
 
 Broker = TypeVar("Broker", bound=BrokerUsecase[Any, Any])
@@ -148,11 +147,11 @@ class TestBroker(Generic[Broker]):
     def _fake_start(self, broker: Broker, *args: Any, **kwargs: Any) -> None:
         patch_broker_calls(broker)
 
-        for p in broker._publishers:
-            if getattr(p, "_fake_handler", None):
+        for publisher in broker._publishers:
+            if getattr(publisher, "_fake_handler", None):
                 continue
 
-            sub, is_real = self.create_publisher_fake_subscriber(broker, p)
+            sub, is_real = self.create_publisher_fake_subscriber(broker, publisher)
 
             if not is_real:
                 self._fake_subscribers.append(sub)
@@ -167,7 +166,7 @@ class TestBroker(Generic[Broker]):
 
             if is_real:
                 mock = MagicMock()
-                p.set_test(mock=mock, with_fake=False)  # type: ignore[attr-defined]
+                publisher.set_test(mock=mock, with_fake=False)  # type: ignore[attr-defined]
                 for h in sub.calls:
                     h.handler.set_test()
                     assert h.handler.mock  # nosec B101
@@ -177,11 +176,10 @@ class TestBroker(Generic[Broker]):
                 handler = sub.calls[0].handler
                 handler.set_test()
                 assert handler.mock  # nosec B101
-                p.set_test(mock=handler.mock, with_fake=True)  # type: ignore[attr-defined]
+                publisher.set_test(mock=handler.mock, with_fake=True)  # type: ignore[attr-defined]
 
         for subscriber in broker._subscribers:
-            subscriber.running = True
-            subscriber.lock = MultiLock()  # type: ignore[attr-defined]
+            subscriber._post_start()
 
     def _fake_close(
         self,

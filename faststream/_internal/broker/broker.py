@@ -8,7 +8,6 @@ from typing import (
     Generic,
     Optional,
     Union,
-    cast,
 )
 
 from fast_depends import Provider
@@ -17,39 +16,33 @@ from typing_extensions import Doc, Self
 from faststream._internal.constants import EMPTY
 from faststream._internal.context.repository import ContextRepo
 from faststream._internal.endpoint.subscriber import SubscriberProto
-from faststream._internal.state import (
-    DIState,
-    LoggerState,
-    SetupAble,
-)
+from faststream._internal.state import DIState, SetupAble
 from faststream._internal.state.broker import (
     BrokerState,
     InitialBrokerState,
 )
-from faststream._internal.state.producer import ProducerUnset
 from faststream._internal.types import (
-    AsyncCustomCallable,
     BrokerMiddleware,
     ConnectionType,
-    CustomCallable,
     MsgType,
 )
-from faststream._internal.utils.functions import to_async
 from faststream.specification.proto import ServerSpecification
 
-from .abc_broker import ABCBroker, FinalPublisher
+from .abc_broker import ABCBroker
 from .pub_base import BrokerPublishMixin
 
 if TYPE_CHECKING:
     from types import TracebackType
 
-    from fast_depends.dependencies import Dependant
     from fast_depends.library.serializer import SerializerProto
 
     from faststream._internal.basic_types import AnyDict, Decorator
+    from faststream._internal.logger import LoggerState
     from faststream._internal.producer import ProducerProto
     from faststream.security import BaseSecurity
     from faststream.specification.schema.extra import Tag, TagDict
+
+    from .config import BrokerConfig
 
 
 class BrokerUsecase(
@@ -66,39 +59,17 @@ class BrokerUsecase(
 
     url: Union[str, list[str]]
     _connection: Optional[ConnectionType]
-    middlewares: Sequence["BrokerMiddleware[MsgType]"]
 
     def __init__(
         self,
         *,
-        decoder: Annotated[
-            Optional["CustomCallable"],
-            Doc("Custom decoder object."),
-        ],
-        parser: Annotated[
-            Optional["CustomCallable"],
-            Doc("Custom parser object."),
-        ],
-        dependencies: Annotated[
-            Iterable["Dependant"],
-            Doc("Dependencies to apply to all broker subscribers."),
-        ],
-        middlewares: Annotated[
-            Sequence["BrokerMiddleware[MsgType]"],
-            Doc("Middlewares to apply to all broker publishers/subscribers."),
-        ],
-        graceful_timeout: Annotated[
-            Optional[float],
-            Doc(
-                "Graceful shutdown timeout. Broker waits for all running subscribers completion before shut down.",
-            ),
-        ],
+        config: "BrokerConfig",
         routers: Annotated[
             Sequence["ABCBroker[MsgType]"],
             Doc("Routers to apply to broker."),
         ],
         # Logging args
-        logger_state: LoggerState,
+        logger_state: "LoggerState",
         # FastDepends args
         apply_types: Annotated[
             bool,
@@ -152,25 +123,11 @@ class BrokerUsecase(
                 context=ContextRepo(),
             ),
             logger_state=logger_state,
-            graceful_timeout=graceful_timeout,
-            producer=ProducerUnset(),
         )
 
         super().__init__(
-            middlewares=middlewares,
-            dependencies=dependencies,
-            decoder=cast(
-                "Optional[AsyncCustomCallable]",
-                to_async(decoder) if decoder else None,
-            ),
-            parser=cast(
-                "Optional[AsyncCustomCallable]",
-                to_async(parser) if parser else None,
-            ),
             routers=routers,
-            # Broker is a root router
-            include_in_schema=True,
-            prefix="",
+            config=config,
             state=state,
         )
 
@@ -188,8 +145,12 @@ class BrokerUsecase(
         self.security = security
 
     @property
+    def middlewares(self) -> Sequence["BrokerMiddleware[MsgType]"]:
+        return self.config.broker_middlewares
+
+    @property
     def _producer(self) -> "ProducerProto":
-        return self._state.get().producer
+        return self.config.producer
 
     @property
     def context(self) -> "ContextRepo":
@@ -217,12 +178,12 @@ class BrokerUsecase(
         # TODO: filter by already running handlers after TestClient refactor
         state = self._state.get()
 
-        for subscriber in self._subscribers:
+        for sub in self._subscribers:
             state.logger_state.log(
-                f"`{subscriber.call_name}` waiting for messages",
-                extra=subscriber.get_log_context(None),
+                f"`{sub.call_name}` waiting for messages",
+                extra=sub.get_log_context(None),
             )
-            await subscriber.start()
+            await sub.start()
 
         if not self.running:
             self.running = True
@@ -304,23 +265,7 @@ class BrokerUsecase(
 
     @property
     def _subscriber_setup_extra(self) -> "AnyDict":
-        return {
-            "extra_context": {
-                "broker": self,
-            },
-            # broker options
-            "broker_parser": self._parser,
-            "broker_decoder": self._decoder,
-        }
-
-    def publisher(
-        self,
-        publisher: "FinalPublisher[MsgType]",
-        is_running: bool = False,
-    ) -> "FinalPublisher[MsgType]":
-        pub = super().publisher(publisher, is_running=self.running)
-        self.setup_publisher(pub)
-        return pub
+        return {}
 
     async def close(
         self,

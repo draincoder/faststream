@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Iterable
+from collections.abc import Awaitable, Generator, Iterable
 from functools import partial
 from itertools import chain
 from typing import (
@@ -17,7 +17,6 @@ from faststream._internal.endpoint.call_wrapper import (
 )
 from faststream._internal.endpoint.utils import process_msg
 from faststream._internal.state import BrokerState, EmptyBrokerState, Pointer
-from faststream._internal.state.producer import ProducerUnset
 from faststream._internal.types import (
     MsgType,
     P_HandlerParams,
@@ -28,9 +27,9 @@ from faststream.message.source_type import SourceType
 from .proto import PublisherProto
 
 if TYPE_CHECKING:
+    from faststream._internal.broker import BrokerConfig
     from faststream._internal.producer import ProducerProto
     from faststream._internal.types import (
-        BrokerMiddleware,
         PublisherMiddleware,
     )
     from faststream.response.response import PublishCommand
@@ -42,10 +41,10 @@ class PublisherUsecase(PublisherProto[MsgType]):
     """A base class for publishers in an asynchronous API."""
 
     def __init__(self, config: "PublisherUsecaseConfig", /) -> None:
-        self.middlewares = config.middlewares
-        self._broker_middlewares = config.broker_middlewares
+        broker_config = config.config
+        self._outer_config = broker_config
 
-        self.__producer: Optional[ProducerProto] = ProducerUnset()
+        self.middlewares = config.middlewares
 
         self._fake_handler = False
         self.mock: Optional[MagicMock] = None
@@ -54,22 +53,21 @@ class PublisherUsecase(PublisherProto[MsgType]):
             EmptyBrokerState("You should include publisher to any broker.")
         )
 
-    def add_middleware(self, middleware: "BrokerMiddleware[MsgType]") -> None:
-        self._broker_middlewares = (*self._broker_middlewares, middleware)
+    def register(self, config: "BrokerConfig", /) -> None:
+        self._outer_config = final_config = config | self._outer_config
+        self.include_in_schema = final_config.include_in_schema
 
     @property
     def _producer(self) -> "ProducerProto":
-        return self.__producer or self._state.get().producer
+        return self._outer_config.producer
 
     @override
     def _setup(
         self,
         *,
         state: "Pointer[BrokerState]",
-        producer: Optional["ProducerProto"] = None,
     ) -> None:
         self._state = state
-        self.__producer = producer
 
     def set_test(
         self,
@@ -105,19 +103,19 @@ class PublisherUsecase(PublisherProto[MsgType]):
         _extra_middlewares: Iterable["PublisherMiddleware"],
     ) -> Any:
         pub: Callable[..., Awaitable[Any]] = self._producer.publish
+        for pub_m in self._build_middlewares_stack(_extra_middlewares):
+            pub = partial(pub_m, pub)
 
-        context = self._state.get().di_state.context
+        return await pub(cmd)
 
-        for pub_m in chain(
-            self.middlewares[::-1],
-            (
-                _extra_middlewares
-                or (
-                    m(None, context=context).publish_scope
-                    for m in self._broker_middlewares[::-1]
-                )
-            ),
-        ):
+    async def _basic_publish_batch(
+        self,
+        cmd: "PublishCommand",
+        *,
+        _extra_middlewares: Iterable["PublisherMiddleware"],
+    ) -> Any:
+        pub = self._producer.publish_batch
+        for pub_m in self._build_middlewares_stack(_extra_middlewares):
             pub = partial(pub_m, pub)
 
         return await pub(cmd)
@@ -127,25 +125,18 @@ class PublisherUsecase(PublisherProto[MsgType]):
         cmd: "PublishCommand",
     ) -> Optional[Any]:
         request = self._producer.request
-
-        context = self._state.get().di_state.context
-
-        for pub_m in chain(
-            self.middlewares[::-1],
-            (
-                m(None, context=context).publish_scope
-                for m in self._broker_middlewares[::-1]
-            ),
-        ):
+        for pub_m in self._build_middlewares_stack():
             request = partial(pub_m, request)
 
         published_msg = await request(cmd)
+
+        context = self._state.get().di_state.context
 
         response_msg: Any = await process_msg(
             msg=published_msg,
             middlewares=(
                 m(published_msg, context=context)
-                for m in self._broker_middlewares[::-1]
+                for m in self._outer_config.broker_middlewares[::-1]
             ),
             parser=self._producer._parser,
             decoder=self._producer._decoder,
@@ -153,26 +144,19 @@ class PublisherUsecase(PublisherProto[MsgType]):
         )
         return response_msg
 
-    async def _basic_publish_batch(
+    def _build_middlewares_stack(
         self,
-        cmd: "PublishCommand",
-        *,
-        _extra_middlewares: Iterable["PublisherMiddleware"],
-    ) -> Any:
-        pub = self._producer.publish_batch
-
+        extra_middlewares: Iterable["PublisherMiddleware"] = (),
+    ) -> Generator["PublisherMiddleware", None, None]:
         context = self._state.get().di_state.context
 
-        for pub_m in chain(
+        yield from chain(
             self.middlewares[::-1],
             (
-                _extra_middlewares
+                extra_middlewares
                 or (
                     m(None, context=context).publish_scope
-                    for m in self._broker_middlewares[::-1]
+                    for m in self._outer_config.broker_middlewares[::-1]
                 )
             ),
-        ):
-            pub = partial(pub_m, pub)
-
-        return await pub(cmd)
+        )

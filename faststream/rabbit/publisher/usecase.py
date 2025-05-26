@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Optional, Union
 
 from aio_pika import IncomingMessage
@@ -18,8 +17,8 @@ from .options import MessageOptions, PublishOptions
 if TYPE_CHECKING:
     import aiormq
 
-    from faststream._internal.state import BrokerState
     from faststream._internal.types import PublisherMiddleware
+    from faststream.rabbit.configs import RabbitBrokerConfig
     from faststream.rabbit.message import RabbitMessage
     from faststream.rabbit.publisher.producer import AioPikaFastProducer
     from faststream.rabbit.types import AioPikaSendableMessage
@@ -49,11 +48,7 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
 
     _producer: Optional["AioPikaFastProducer"]
 
-    def __init__(
-        self,
-        config: RabbitPublisherConfig,
-        /
-    ) -> None:
+    def __init__(self, config: RabbitPublisherConfig, /) -> None:
         super().__init__(config)
 
         self.queue = config.queue
@@ -65,74 +60,50 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
         self.reply_to: str = config.message_kwargs.pop("reply_to", None) or ""
         self.timeout = config.message_kwargs.pop("timeout", None)
 
-        message_options, _ = filter_by_dict(
-            MessageOptions, dict(config.message_kwargs)
-        )
+        message_options, _ = filter_by_dict(MessageOptions, dict(config.message_kwargs))
+        if config.config.app_id:
+            message_options["app_id"] = config.config.app_id
         self.message_options = message_options
 
-        publish_options, _ = filter_by_dict(
-            PublishOptions, dict(config.message_kwargs)
-        )
+        publish_options, _ = filter_by_dict(PublishOptions, dict(config.message_kwargs))
         self.publish_options = publish_options
 
-        self.app_id = None
+    def register(self, config: "RabbitBrokerConfig", /) -> None:
+        if not self.message_options.get("app_id"):
+            self.message_options["app_id"] = config.app_id
 
-    @override
-    def _setup(  # type: ignore[override]
-        self,
-        *,
-        state: "BrokerState",
-    ) -> None:
-        # AppId was set in `faststream.rabbit.schemas.proto.BaseRMQInformation`
-        self.message_options["app_id"] = self.app_id
-        super()._setup(state=state)
+        return super().register(config)
 
-    @property
-    def routing(self) -> str:
-        """Return real routing_key of Publisher."""
-        return self.routing_key or self.queue.routing
+    def routing(
+        self, *, queue: Union["RabbitQueue", str, None] = None, routing_key: str = "",
+    ) -> str:
+        if not routing_key:
+            if q := RabbitQueue.validate(queue):
+                routing_key = q.routing()
+            else:
+                routing_key = self.routing_key or self.queue.routing()
+
+            routing_key = f"{self._outer_config.prefix}{routing_key}"
+
+        return routing_key
 
     @override
     async def publish(
         self,
         message: "AioPikaSendableMessage",
-        queue: Annotated[
-            Union["RabbitQueue", str, None],
-            Doc("Message routing key to publish with."),
-        ] = None,
-        exchange: Annotated[
-            Union["RabbitExchange", str, None],
-            Doc("Target exchange to publish message to."),
-        ] = None,
+        queue: Union["RabbitQueue", str, None] = None,
+        exchange: Union["RabbitExchange", str, None] = None,
         *,
-        routing_key: Annotated[
-            str,
-            Doc(
-                "Message routing key to publish with. "
-                "Overrides `queue` option if present.",
-            ),
-        ] = "",
+        routing_key: str = "",
         # message args
-        correlation_id: Annotated[
-            Optional[str],
-            Doc(
-                "Manual message **correlation_id** setter. "
-                "**correlation_id** is a useful option to trace messages.",
-            ),
-        ] = None,
+        correlation_id: Optional[str] = None,
         # publisher specific
         **publish_kwargs: "Unpack[PublishKwargs]",
     ) -> Optional["aiormq.abc.ConfirmationFrameType"]:
-        if not routing_key:
-            if q := RabbitQueue.validate(queue):
-                routing_key = q.routing
-            else:
-                routing_key = self.routing
-
         headers = self.headers | publish_kwargs.pop("headers", {})
         cmd = RabbitPublishCommand(
             message,
-            routing_key=routing_key,
+            routing_key=self.routing(queue=queue, routing_key=routing_key),
             exchange=RabbitExchange.validate(exchange or self.exchange),
             correlation_id=correlation_id or gen_cor_id(),
             headers=headers,
@@ -156,7 +127,7 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
         """This method should be called in subscriber flow only."""
         cmd = RabbitPublishCommand.from_cmd(cmd)
 
-        cmd.destination = self.routing
+        cmd.destination = self.routing()
         cmd.reply_to = cmd.reply_to or self.reply_to
         cmd.add_headers(self.headers, override=False)
 
@@ -171,43 +142,17 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
     async def request(
         self,
         message: "AioPikaSendableMessage",
-        queue: Annotated[
-            Union["RabbitQueue", str, None],
-            Doc("Message routing key to publish with."),
-        ] = None,
-        exchange: Annotated[
-            Union["RabbitExchange", str, None],
-            Doc("Target exchange to publish message to."),
-        ] = None,
+        queue: Union["RabbitQueue", str, None] = None,
+        exchange: Union["RabbitExchange", str, None] = None,
         *,
-        routing_key: Annotated[
-            str,
-            Doc(
-                "Message routing key to publish with. "
-                "Overrides `queue` option if presented.",
-            ),
-        ] = "",
-        # message args
-        correlation_id: Annotated[
-            Optional[str],
-            Doc(
-                "Manual message **correlation_id** setter. "
-                "**correlation_id** is a useful option to trace messages.",
-            ),
-        ] = None,
-        # publisher specific
+        routing_key: str = "",
+        correlation_id: Optional[str] = None,
         **publish_kwargs: "Unpack[RequestPublishKwargs]",
     ) -> "RabbitMessage":
-        if not routing_key:
-            if q := RabbitQueue.validate(queue):
-                routing_key = q.routing
-            else:
-                routing_key = self.routing
-
         headers = self.headers | publish_kwargs.pop("headers", {})
         cmd = RabbitPublishCommand(
             message,
-            routing_key=routing_key,
+            routing_key=self.routing(queue=queue, routing_key=routing_key),
             exchange=RabbitExchange.validate(exchange or self.exchange),
             correlation_id=correlation_id or gen_cor_id(),
             headers=headers,
@@ -217,9 +162,3 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
 
         msg: RabbitMessage = await self._basic_request(cmd)
         return msg
-
-    def add_prefix(self, prefix: str) -> None:
-        """Include Publisher in router."""
-        new_q = deepcopy(self.queue)
-        new_q.name = prefix + new_q.name
-        self.queue = new_q

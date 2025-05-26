@@ -1,4 +1,3 @@
-
 from faststream._internal.endpoint.subscriber.specification.specified import (
     SpecificationSubscriber as SpecificationSubscriberMixin,
 )
@@ -40,7 +39,7 @@ class SpecificationSubscriber(
                 operation=Operation(
                     bindings=OperationBinding(
                         amqp=amqp.OperationBinding(
-                            routing_key=self.queue.routing,
+                            routing_key=self.queue.routing(),
                             queue=queue_binding,
                             exchange=exchange_binding,
                             ack=True,

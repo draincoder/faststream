@@ -3,22 +3,17 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Optional,
 )
 
 from faststream._internal.state.broker import EmptyBrokerState
-from faststream._internal.types import (
-    BrokerMiddleware,
-    CustomCallable,
-    MsgType,
-)
+from faststream._internal.types import MsgType
 
 from .abc_broker import ABCBroker
 
 if TYPE_CHECKING:
-    from fast_depends.dependencies import Dependant
-
     from faststream._internal.basic_types import AnyDict
+
+    from .config import BrokerConfig
 
 
 class ArgsContainer:
@@ -66,23 +61,12 @@ class BrokerRouter(ABCBroker[MsgType]):
     def __init__(
         self,
         *,
+        config: "BrokerConfig",
         handlers: Iterable[SubscriberRoute],
-        # base options
-        prefix: str,
-        dependencies: Iterable["Dependant"],
-        middlewares: Sequence["BrokerMiddleware[MsgType]"],
-        parser: Optional["CustomCallable"],
-        decoder: Optional["CustomCallable"],
-        include_in_schema: Optional[bool],
         routers: Sequence["ABCBroker[MsgType]"],
     ) -> None:
         super().__init__(
-            prefix=prefix,
-            dependencies=dependencies,
-            middlewares=middlewares,
-            parser=parser,
-            decoder=decoder,
-            include_in_schema=include_in_schema,
+            config=config,
             state=EmptyBrokerState("You should include router to any broker."),
             routers=routers,
         )

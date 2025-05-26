@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 
 class SpecificationPublisher(SpecificationEndpoint[MsgType, PublisherSpec]):
-
     _state: "Pointer[BrokerState]"  # should be set in next parent
 
     def __init__(

@@ -1,11 +1,8 @@
-from typing import TYPE_CHECKING, Optional, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from faststream.exceptions import IncorrectState
 
-from .producer import ProducerUnset
-
 if TYPE_CHECKING:
-    from faststream._internal.producer import ProducerProto
 
     from .fast_depends import DIState
     from .logger import LoggerState
@@ -14,10 +11,6 @@ if TYPE_CHECKING:
 class BrokerState(Protocol):
     di_state: "DIState"
     logger_state: "LoggerState"
-    producer: "ProducerProto"
-
-    # Persistent variables
-    graceful_timeout: Optional[float]
 
     def _setup(self) -> None: ...
 
@@ -29,7 +22,6 @@ class BrokerState(Protocol):
 class _EmptyBrokerState(BrokerState):
     def __init__(self, error_msg: str) -> None:
         self.error_msg = error_msg
-        self.producer = ProducerUnset()
 
     @property
     def logger_state(self) -> "LoggerState":
@@ -37,14 +29,6 @@ class _EmptyBrokerState(BrokerState):
 
     @logger_state.setter
     def logger_state(self, value: "LoggerState", /) -> None:
-        raise IncorrectState(self.error_msg)
-
-    @property
-    def graceful_timeout(self) -> Optional[float]:
-        raise IncorrectState(self.error_msg)
-
-    @graceful_timeout.setter
-    def graceful_timeout(self, value: Optional[float], /) -> None:
         raise IncorrectState(self.error_msg)
 
     def _setup(self) -> None:
@@ -81,14 +65,9 @@ class InitialBrokerState(BrokerState):
         *,
         di_state: "DIState",
         logger_state: "LoggerState",
-        graceful_timeout: Optional[float],
-        producer: "ProducerProto",
     ) -> None:
         self.di_state = di_state
         self.logger_state = logger_state
-
-        self.graceful_timeout = graceful_timeout
-        self.producer = producer
 
         self.setupped = False
 

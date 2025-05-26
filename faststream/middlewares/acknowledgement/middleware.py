@@ -21,7 +21,10 @@ if TYPE_CHECKING:
 
 class AcknowledgementMiddleware:
     def __init__(
-        self, logger: "LoggerState", ack_policy: "AckPolicy", extra_options: "AnyDict"
+        self,
+        logger: "LoggerState",
+        ack_policy: "AckPolicy",
+        extra_options: "AnyDict",
     ) -> None:
         self.ack_policy = ack_policy
         self.extra_options = extra_options

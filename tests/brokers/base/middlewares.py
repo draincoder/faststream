@@ -564,8 +564,8 @@ class MiddlewareTestcase(LocalMiddlewareTestcase):
             )
 
         assert event.is_set()
-        assert mock.start.call_count == 2
-        assert mock.end.call_count == 2
+        assert mock.start.call_count == 2, mock.start.call_count
+        assert mock.end.call_count == 2, mock.end.call_count
 
     async def test_patch_publish(
         self,

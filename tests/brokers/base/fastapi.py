@@ -155,7 +155,7 @@ class FastAPITestcase(BaseTestcaseConfig):
         assert event.is_set()
         mock.assert_called_with(True)
 
-    async def test_faststream_context(self, queue: str) -> None:
+    def test_faststream_context(self, queue: str) -> None:
         router = self.router_class()
 
         args, kwargs = self.get_subscriber_params(queue)
@@ -170,7 +170,7 @@ class FastAPITestcase(BaseTestcaseConfig):
         with pytest.raises(SetupError), TestClient(app):
             ...
 
-    async def test_faststream_context_annotated(self, queue: str) -> None:
+    def test_faststream_context_annotated(self, queue: str) -> None:
         router = self.router_class()
 
         args, kwargs = self.get_subscriber_params(queue)

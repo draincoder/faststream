@@ -24,7 +24,6 @@ from faststream.kafka.publisher.fake import KafkaFakePublisher
 if TYPE_CHECKING:
     from aiokafka import AIOKafkaConsumer
 
-    from faststream._internal.basic_types import AnyDict
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.state import BrokerState, Pointer
     from faststream.kafka.configs import KafkaSubscriberConfig
@@ -67,8 +66,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         *,
         client_id: Optional[str],
         builder: Callable[..., "AIOKafkaConsumer"],
-        # basic args
-        extra_context: "AnyDict",
         # broker base_configs
         broker_parser: Optional["CustomCallable"],
         broker_decoder: Optional["CustomCallable"],
@@ -79,7 +76,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         self.builder = builder
 
         super()._setup(
-            extra_context=extra_context,
             broker_parser=broker_parser,
             broker_decoder=broker_decoder,
             state=state,

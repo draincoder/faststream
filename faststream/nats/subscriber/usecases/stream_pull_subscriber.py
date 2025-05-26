@@ -118,7 +118,7 @@ class BatchPullStreamSubscriber(
 
     def __init__(
         self,
-        config,
+        config: "NatsSubscriberConfig",
         *,
         stream: "JStream",
         pull_sub: "PullSub",

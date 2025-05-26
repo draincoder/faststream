@@ -8,7 +8,9 @@ from .usecase import NatsPublisherConfig, NatsSubscriberConfig
 
 
 @dataclass(kw_only=True)
-class NatsSubscriberConfigFacade(NatsSubscriberSpecificationConfig, NatsSubscriberConfig):
+class NatsSubscriberConfigFacade(
+    NatsSubscriberSpecificationConfig, NatsSubscriberConfig
+):
     pass
 
 

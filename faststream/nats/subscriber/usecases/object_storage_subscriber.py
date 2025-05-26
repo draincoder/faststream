@@ -44,7 +44,11 @@ class ObjStoreWatchSubscriber(
     _fetch_sub: Optional[UnsubscribeAdapter["ObjectStore.ObjectWatcher"]]
 
     def __init__(
-        self, config: "NatsSubscriberConfig", /, *, obj_watch: "ObjWatch",
+        self,
+        config: "NatsSubscriberConfig",
+        /,
+        *,
+        obj_watch: "ObjWatch",
     ) -> None:
         parser = ObjParser(pattern="")
         config.default_parser = parser.parse_message

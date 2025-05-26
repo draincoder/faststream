@@ -3,7 +3,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 from faststream._internal.log.logging import get_broker_logger
-from faststream._internal.state.logger import (
+from faststream._internal.logger import (
     DefaultLoggerStorage,
     make_logger_state,
 )

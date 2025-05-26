@@ -20,7 +20,6 @@ from faststream.redis.publisher.fake import RedisFakePublisher
 if TYPE_CHECKING:
     from redis.asyncio.client import Redis
 
-    from faststream._internal.basic_types import AnyDict
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.state import BrokerState, Pointer
     from faststream._internal.types import (
@@ -49,8 +48,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[UnifyRedisDict]):
         self,
         *,
         connection: Optional["Redis[bytes]"],
-        # basic args
-        extra_context: "AnyDict",
         # broker options
         broker_parser: Optional["CustomCallable"],
         broker_decoder: Optional["CustomCallable"],
@@ -60,7 +57,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[UnifyRedisDict]):
         self._client = connection
 
         super()._setup(
-            extra_context=extra_context,
             broker_parser=broker_parser,
             broker_decoder=broker_decoder,
             state=state,

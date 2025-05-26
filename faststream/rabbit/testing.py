@@ -1,5 +1,5 @@
 from collections.abc import Generator, Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Any, Optional, Union
 from unittest import mock
 from unittest.mock import AsyncMock
@@ -27,6 +27,8 @@ from faststream.rabbit.schemas import (
 if TYPE_CHECKING:
     from aio_pika.abc import DateType, HeadersType
 
+    from faststream._internal.broker import BrokerConfig
+    from faststream._internal.producer import ProducerProto
     from faststream.rabbit.publisher.specified import SpecificationPublisher
     from faststream.rabbit.response import RabbitPublishCommand
     from faststream.rabbit.subscriber.usecase import LogicSubscriber
@@ -34,6 +36,13 @@ if TYPE_CHECKING:
 
 
 __all__ = ("TestRabbitBroker",)
+
+
+@contextmanager
+def change_producer(config: "BrokerConfig", producer: "ProducerProto") -> Generator[None, None, None]:
+    old_producer, config.producer = config.producer, producer
+    yield
+    config.producer = old_producer
 
 
 class TestRabbitBroker(TestBroker[RabbitBroker]):
@@ -48,7 +57,7 @@ class TestRabbitBroker(TestBroker[RabbitBroker]):
                 new_callable=AsyncMock,
             ),
             mock.patch.object(
-                broker,
+                broker.config,
                 "declarer",
                 new_callable=AsyncMock,
             ),
@@ -58,10 +67,18 @@ class TestRabbitBroker(TestBroker[RabbitBroker]):
 
     @contextmanager
     def _patch_producer(self, broker: RabbitBroker) -> Iterator[None]:
-        old_producer = broker._state.get().producer
-        broker._state.patch_value(producer=FakeProducer(broker))
-        yield
-        broker._state.patch_value(producer=old_producer)
+        fake_producer = FakeProducer(broker)
+
+        with ExitStack() as es:
+            es.enter_context(change_producer(broker.config, fake_producer))
+
+            for s in broker._subscribers:
+                es.enter_context(change_producer(s._outer_config, fake_producer))
+
+            for p in broker._publishers:
+                es.enter_context(change_producer(p._outer_config, fake_producer))
+
+            yield
 
     @staticmethod
     async def _fake_connect(broker: "RabbitBroker", *args: Any, **kwargs: Any) -> None:
@@ -76,7 +93,7 @@ class TestRabbitBroker(TestBroker[RabbitBroker]):
         for handler in broker._subscribers:
             if _is_handler_matches(
                 handler,
-                publisher.routing,
+                publisher.routing(),
                 {},
                 publisher.exchange,
             ):
@@ -86,7 +103,7 @@ class TestRabbitBroker(TestBroker[RabbitBroker]):
         if sub is None:
             is_real = False
             sub = broker.subscriber(
-                queue=publisher.routing,
+                queue=publisher.routing(),
                 exchange=publisher.exchange,
             )
         else:
@@ -137,7 +154,7 @@ def build_message(
     que = RabbitQueue.validate(queue)
     exch = RabbitExchange.validate(exchange)
 
-    routing = routing_key or que.routing
+    routing = routing_key or que.routing()
 
     correlation_id = correlation_id or gen_cor_id()
     msg = AioPikaParser.encode_message(
@@ -216,6 +233,7 @@ class FakeProducer(AioPikaFastProducer):
             **cmd.message_options,
         )
 
+        called = False
         for handler in self.broker._subscribers:  # pragma: no branch
             if _is_handler_matches(
                 handler,
@@ -223,7 +241,11 @@ class FakeProducer(AioPikaFastProducer):
                 incoming.headers,
                 cmd.exchange,
             ):
+                called = True
                 await self._execute_handler(incoming, handler)
+
+        if not called:
+            raise SubscriberNotFound
 
     @override
     async def request(  # type: ignore[override]
@@ -280,13 +302,13 @@ def _is_handler_matches(
         return False
 
     if handler.exchange is None or handler.exchange.type == ExchangeType.DIRECT:
-        return handler.queue.name == routing_key
+        return handler.routing() == routing_key
 
     if handler.exchange.type == ExchangeType.FANOUT:
         return True
 
     if handler.exchange.type == ExchangeType.TOPIC:
-        return apply_pattern(handler.queue.routing, routing_key)
+        return apply_pattern(handler.routing(), routing_key)
 
     if handler.exchange.type == ExchangeType.HEADERS:
         queue_headers = (handler.queue.bind_arguments or {}).copy()

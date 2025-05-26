@@ -3,7 +3,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Optional
 
 from faststream._internal.log.logging import get_broker_logger
-from faststream._internal.state.logger import (
+from faststream._internal.logger import (
     DefaultLoggerStorage,
     make_logger_state,
 )
@@ -23,7 +23,7 @@ class KafkaParamsStorage(DefaultLoggerStorage):
         self._max_topic_len = 4
         self._max_group_len = 0
 
-        self.logger_log_level = logging.INFO
+        self.logger_log_level = logging.INFOw
 
     def set_level(self, level: int) -> None:
         self.logger_log_level = level

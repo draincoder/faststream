@@ -9,10 +9,14 @@ from typing import (
 
 from faststream._internal.endpoint.publisher import PublisherProto
 from faststream._internal.endpoint.specification.base import SpecificationEndpoint
-from faststream._internal.endpoint.subscriber import SubscriberProto
+from faststream._internal.endpoint.subscriber import (
+    SubscriberProto,
+)
 from faststream._internal.state import BrokerState, Pointer
-from faststream._internal.types import BrokerMiddleware, CustomCallable, MsgType
+from faststream._internal.types import BrokerMiddleware, MsgType
 from faststream.specification.schema import PublisherSpec, SubscriberSpec
+
+from .config import BrokerConfig
 
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
@@ -47,25 +51,16 @@ class ABCBroker(Generic[MsgType]):
     def __init__(
         self,
         *,
-        prefix: str,
-        dependencies: Iterable["Dependant"],
-        middlewares: Sequence["BrokerMiddleware[MsgType]"],
-        parser: Optional["CustomCallable"],
-        decoder: Optional["CustomCallable"],
-        include_in_schema: Optional[bool],
+        config: "BrokerConfig",
         state: "BrokerState",
         routers: Sequence["ABCBroker[MsgType]"],
     ) -> None:
-        self.prefix = prefix
-        self.include_in_schema = include_in_schema
+        self.config = config
+        self._parser = config.broker_parser
+        self._decoder = config.broker_decoder
 
         self._subscribers = []
         self._publishers = []
-
-        self.middlewares = middlewares
-        self._dependencies = dependencies
-        self._parser = parser
-        self._decoder = decoder
 
         self._state = Pointer(state)
 
@@ -76,34 +71,23 @@ class ABCBroker(Generic[MsgType]):
 
         Current middleware will be used as a most inner of already existed ones.
         """
-        self.middlewares = (*self.middlewares, middleware)
-
-        for sub in self._subscribers:
-            sub.add_middleware(middleware)
-
-        for pub in self._publishers:
-            pub.add_middleware(middleware)
+        self.config.add_middleware(middleware)
 
     @abstractmethod
     def subscriber(
         self,
         subscriber: "FinalSubscriber[MsgType]",
-        is_running: bool = False,
     ) -> "FinalSubscriber[MsgType]":
-        subscriber.add_prefix(self.prefix)
-        if not is_running:
-            self._subscribers.append(subscriber)
+        self._subscribers.append(subscriber)
         return subscriber
 
     @abstractmethod
     def publisher(
         self,
         publisher: "FinalPublisher[MsgType]",
-        is_running: bool = False,
     ) -> "FinalPublisher[MsgType]":
-        publisher.add_prefix(self.prefix)
-        if not is_running:
-            self._publishers.append(publisher)
+        self._publishers.append(publisher)
+        self.setup_publisher(publisher)
         return publisher
 
     def setup_publisher(
@@ -130,40 +114,20 @@ class ABCBroker(Generic[MsgType]):
         """Includes a router in the current object."""
         router._setup(self._state.get())
 
-        for h in router._subscribers:
-            h.add_prefix(f"{self.prefix}{prefix}")
+        new_config = self.config | BrokerConfig(
+            prefix=prefix,
+            include_in_schema=include_in_schema,
+            broker_middlewares=middlewares,
+            broker_dependencies=dependencies,
+        )
 
-            if include_in_schema is None:
-                h.include_in_schema = self._solve_include_in_schema(h.include_in_schema)
-            else:
-                h.include_in_schema = include_in_schema
+        for sub in router._subscribers:
+            sub.register(new_config)
+            self._subscribers.append(sub)
 
-            h._broker_middlewares = (
-                *self.middlewares,
-                *middlewares,
-                *h._broker_middlewares,
-            )
-            h._broker_dependencies = (
-                *self._dependencies,
-                *dependencies,
-                *h._broker_dependencies,
-            )
-            self._subscribers.append(h)
-
-        for p in router._publishers:
-            p.add_prefix(self.prefix)
-
-            if include_in_schema is None:
-                p.include_in_schema = self._solve_include_in_schema(p.include_in_schema)
-            else:
-                p.include_in_schema = include_in_schema
-
-            p._broker_middlewares = (
-                *self.middlewares,
-                *middlewares,
-                *p._broker_middlewares,
-            )
-            self._publishers.append(p)
+        for pub in router._publishers:
+            pub.register(new_config)
+            self._publishers.append(pub)
 
     def include_routers(
         self,
@@ -172,20 +136,3 @@ class ABCBroker(Generic[MsgType]):
         """Includes routers in the object."""
         for r in routers:
             self.include_router(r)
-
-    def _solve_include_in_schema(self, include_in_schema: bool) -> bool:
-        """Resolve router `include_in_schema` option with current value respect.
-
-        >>> self.include_in_schema = False
-        False
-
-        >>> self.include_in_schema = True | None, include_in_schema = False
-        False
-
-        >>> self.include_in_schema = True | None, include_in_schema = True
-        True
-        """
-        if self.include_in_schema is False:
-            return False
-
-        return include_in_schema

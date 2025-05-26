@@ -36,7 +36,11 @@ class KeyValueWatchSubscriber(
     _fetch_sub: Optional[UnsubscribeAdapter["KeyValue.KeyWatcher"]]
 
     def __init__(
-        self, config: "NatsSubscriberConfig", /, *, kv_watch: "KvWatch",
+        self,
+        config: "NatsSubscriberConfig",
+        /,
+        *,
+        kv_watch: "KvWatch",
     ) -> None:
         parser = KvParser(pattern=config.subject)
         config.default_decoder = parser.decode_message

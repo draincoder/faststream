@@ -20,7 +20,6 @@ from faststream.confluent.publisher.fake import KafkaFakePublisher
 from faststream.confluent.schemas import TopicPartition
 
 if TYPE_CHECKING:
-    from faststream._internal.basic_types import AnyDict
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.state import BrokerState
     from faststream._internal.types import CustomCallable
@@ -63,8 +62,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         *,
         client_id: Optional[str],
         builder: Callable[..., "AsyncConfluentConsumer"],
-        # basic args,
-        extra_context: "AnyDict",
         # broker options
         broker_parser: Optional["CustomCallable"],
         broker_decoder: Optional["CustomCallable"],
@@ -75,7 +72,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         self.builder = builder
 
         super()._setup(
-            extra_context=extra_context,
             broker_parser=broker_parser,
             broker_decoder=broker_decoder,
             state=state,
