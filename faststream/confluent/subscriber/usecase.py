@@ -20,8 +20,8 @@ from faststream.confluent.publisher.fake import KafkaFakePublisher
 from faststream.confluent.schemas import TopicPartition
 
 if TYPE_CHECKING:
-    from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.di import BrokerState
+    from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.types import CustomCallable
     from faststream.confluent.configs import KafkaSubscriberConfig
     from faststream.confluent.helpers.client import AsyncConfluentConsumer

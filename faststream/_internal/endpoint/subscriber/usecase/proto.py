@@ -11,10 +11,10 @@ if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
 
     from faststream._internal.broker import BrokerConfig
+    from faststream._internal.di import FastDependsConfig
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.endpoint.subscriber.call_item import HandlerItem
     from faststream._internal.producer import ProducerProto
-    from faststream._internal.di import FastDependsConfig
     from faststream._internal.types import (
         BrokerMiddleware,
         CustomCallable,

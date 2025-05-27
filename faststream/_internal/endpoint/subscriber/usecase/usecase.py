@@ -38,9 +38,9 @@ if TYPE_CHECKING:
 
     from faststream._internal.basic_types import AnyDict, Decorator
     from faststream._internal.broker import BrokerConfig
+    from faststream._internal.di import FastDependsConfig
     from faststream._internal.endpoint.call_wrapper import HandlerCallWrapper
     from faststream._internal.endpoint.publisher import BasePublisherProto
-    from faststream._internal.di import FastDependsConfig
     from faststream._internal.types import (
         AsyncFilter,
         BrokerMiddleware,

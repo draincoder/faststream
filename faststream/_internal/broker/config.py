@@ -2,9 +2,9 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
+from faststream._internal.di import FastDependsConfig
 from faststream._internal.logger import LoggerState
 from faststream._internal.producer import ProducerProto, ProducerUnset
-from faststream._internal.di import FastDependsConfig
 
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant

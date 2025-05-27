@@ -26,10 +26,10 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from faststream._internal.context.repository import ContextRepo
+    from faststream._internal.di import FastDependsConfig
     from faststream._internal.endpoint.publisher import PublisherProto
     from faststream._internal.endpoint.subscriber import SubscriberProto
     from faststream._internal.producer import ProducerProto
-    from faststream._internal.di import FastDependsConfig
     from faststream.security import BaseSecurity
     from faststream.specification.schema.extra import Tag, TagDict
 

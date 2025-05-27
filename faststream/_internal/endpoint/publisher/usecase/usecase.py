@@ -27,8 +27,8 @@ from .proto import PublisherProto
 
 if TYPE_CHECKING:
     from faststream._internal.broker import BrokerConfig
-    from faststream._internal.producer import ProducerProto
     from faststream._internal.di import FastDependsConfig
+    from faststream._internal.producer import ProducerProto
     from faststream._internal.types import (
         PublisherMiddleware,
     )

@@ -17,8 +17,8 @@ from faststream._internal.basic_types import Lifespan, LoggerProto
 from faststream._internal.broker.broker import BrokerUsecase
 from faststream._internal.cli.supervisors.utils import set_exit
 from faststream._internal.constants import EMPTY
-from faststream._internal.logger import logger
 from faststream._internal.di import FastDependsConfig
+from faststream._internal.logger import logger
 from faststream.asgi.app import AsgiFastStream
 
 if TYPE_CHECKING:
@@ -44,7 +44,6 @@ class FastStream(Application):
         self,
         broker: Optional["BrokerUsecase[Any, Any]"] = None,
         /,
-        # regular broker args
         logger: Optional["LoggerProto"] = logger,
         provider: Optional["Provider"] = None,
         serializer: Optional["SerializerProto"] = EMPTY,

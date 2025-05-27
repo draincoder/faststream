@@ -302,7 +302,6 @@ class StreamRouter(
                     app_version=self.version,
                     contact=self.contact,
                     license=self.license,
-                    schema_version="3.0.0",
                 )
 
                 app.include_router(self.docs_router)

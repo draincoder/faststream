@@ -12,8 +12,8 @@ from typing import (
 
 from typing_extensions import ParamSpec
 
-from faststream._internal.logger import logger
 from faststream._internal.di import FastDependsConfig
+from faststream._internal.logger import logger
 from faststream._internal.utils import apply_types
 from faststream._internal.utils.functions import (
     drop_response_type,
@@ -123,7 +123,7 @@ class Application(StartAbleApplication):
         self,
         broker: Optional["BrokerUsecase[Any, Any]"] = None,
         /,
-        config: "FastDependsConfig" = None,
+        config: Optional["FastDependsConfig"] = None,
         logger: Optional["LoggerProto"] = logger,
         lifespan: Optional["Lifespan"] = None,
         on_startup: Sequence["AnyCallable"] = (),
@@ -258,17 +258,11 @@ class Application(StartAbleApplication):
         log_level: int = logging.INFO,
     ) -> AsyncIterator[None]:
         """Separated startup logging."""
-        self._log(
-            log_level,
-            "FastStream app shutting down...",
-        )
+        self._log(log_level, "FastStream app shutting down...")
 
         yield
 
-        self._log(
-            log_level,
-            "FastStream app shut down gracefully.",
-        )
+        self._log(log_level, "FastStream app shut down gracefully.")
 
     # Service methods
 
