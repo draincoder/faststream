@@ -143,7 +143,7 @@ class StreamRouter(
 
         self._init_setupable_(
             broker,
-            provider=None,
+            config=None,
         )
 
         self.setup_state = setup_state
@@ -227,7 +227,7 @@ class StreamRouter(
                 response_model_exclude_unset=response_model_exclude_unset,
                 response_model_exclude_defaults=response_model_exclude_defaults,
                 response_model_exclude_none=response_model_exclude_none,
-                state=self._state.di_state,
+                config=self.config,
                 fastapi_config=self.fastapi_config,
             )
 

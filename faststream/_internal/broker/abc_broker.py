@@ -12,7 +12,6 @@ from faststream._internal.endpoint.specification.base import SpecificationEndpoi
 from faststream._internal.endpoint.subscriber import (
     SubscriberProto,
 )
-from faststream._internal.state import BrokerState, Pointer
 from faststream._internal.types import BrokerMiddleware, MsgType
 from faststream.specification.schema import PublisherSpec, SubscriberSpec
 
@@ -52,7 +51,6 @@ class ABCBroker(Generic[MsgType]):
         self,
         *,
         config: "BrokerConfig",
-        state: "BrokerState",
         routers: Sequence["ABCBroker[MsgType]"],
     ) -> None:
         self.config = config
@@ -61,8 +59,6 @@ class ABCBroker(Generic[MsgType]):
 
         self._subscribers = []
         self._publishers = []
-
-        self._state = Pointer(state)
 
         self.include_routers(*routers)
 
@@ -87,20 +83,7 @@ class ABCBroker(Generic[MsgType]):
         publisher: "FinalPublisher[MsgType]",
     ) -> "FinalPublisher[MsgType]":
         self._publishers.append(publisher)
-        self.setup_publisher(publisher)
         return publisher
-
-    def setup_publisher(
-        self,
-        publisher: "FinalPublisher[MsgType]",
-        **kwargs: Any,
-    ) -> None:
-        """Setup the Publisher to prepare it to starting."""
-        publisher._setup(**kwargs, state=self._state)
-
-    def _setup(self, state: Optional["BrokerState"]) -> None:
-        if state is not None:
-            self._state.set(state)
 
     def include_router(
         self,
@@ -112,8 +95,6 @@ class ABCBroker(Generic[MsgType]):
         include_in_schema: Optional[bool] = None,
     ) -> None:
         """Includes a router in the current object."""
-        router._setup(self._state.get())
-
         new_config = self.config | BrokerConfig(
             prefix=prefix,
             include_in_schema=include_in_schema,

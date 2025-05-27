@@ -38,10 +38,9 @@ if TYPE_CHECKING:
 
     from faststream._internal.basic_types import AnyDict, Decorator
     from faststream._internal.broker import BrokerConfig
-    from faststream._internal.context.repository import ContextRepo
     from faststream._internal.endpoint.call_wrapper import HandlerCallWrapper
     from faststream._internal.endpoint.publisher import BasePublisherProto
-    from faststream._internal.state import BrokerState, Pointer
+    from faststream._internal.di import FastDependsConfig
     from faststream._internal.types import (
         AsyncFilter,
         BrokerMiddleware,
@@ -99,7 +98,6 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
 
     def register(self, config: "BrokerConfig", /) -> None:
         self._outer_config = final_config = config | self._outer_config
-
         self.include_in_schema = final_config.include_in_schema
 
     def _post_start(self) -> None:
@@ -107,14 +105,9 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         self.running = True
 
     @override
-    def _setup(
-        self,
-        *,
-        state: "Pointer[BrokerState]",
-    ) -> None:
-        # TODO: add EmptyBrokerState to init
-
-        self._state = state
+    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None:
+        if config:
+            self._outer_config.fd_config = config | self._outer_config.fd_config
 
         for call in self.calls:
             if parser := call.item_parser or self._outer_config.broker_parser:
@@ -130,7 +123,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
             call._setup(
                 parser=async_parser,
                 decoder=async_decoder,
-                state=state,
+                config=self._outer_config.fd_config,
                 broker_dependencies=self._outer_config.broker_dependencies,
                 _call_decorators=self._call_decorators,
             )
@@ -284,7 +277,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
             # Stop handler at `exit()` call
             await self.close()
 
-            if app := self._state.get().di_state.context.get("app"):
+            if app := self._outer_config.fd_config.context.get("app"):
                 app.exit()
 
         except Exception:  # nosec B110
@@ -293,9 +286,8 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
 
     async def process_message(self, msg: MsgType) -> "Response":
         """Execute all message processing stages."""
-        broker_state = self._state.get()
-        context: ContextRepo = broker_state.di_state.context
-        logger_state = broker_state.logger_state
+        context = self._outer_config.fd_config.context
+        logger_state = self._outer_config.logger
 
         async with AsyncExitStack() as stack:
             stack.enter_context(self.lock)
@@ -323,7 +315,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
 
                 if message is not None:
                     stack.enter_context(
-                        context.scope("log_context", self.get_log_context(message)),
+                        context.scope("log_context", self.get_log_context(message))
                     )
                     stack.enter_context(context.scope("message", message))
 
@@ -374,7 +366,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         return ensure_response(None)
 
     def __build__middlewares_stack(self) -> tuple["BrokerMiddleware[MsgType]", ...]:
-        logger_state = self._state.get().logger_state
+        logger_state = self._outer_config.logger
 
         if self.ack_policy is AckPolicy.DO_NOTHING:
             broker_middlewares = (
@@ -420,8 +412,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         extra: Optional["AnyDict"] = None,
         exc_info: Optional[Exception] = None,
     ) -> None:
-        state = self._state.get()
-        state.logger_state.logger.log(
+        self._outer_config.logger.log(
             log_level,
             message,
             extra=extra,

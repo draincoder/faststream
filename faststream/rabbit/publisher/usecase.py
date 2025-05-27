@@ -75,7 +75,10 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
         return super().register(config)
 
     def routing(
-        self, *, queue: Union["RabbitQueue", str, None] = None, routing_key: str = "",
+        self,
+        *,
+        queue: Union["RabbitQueue", str, None] = None,
+        routing_key: str = "",
     ) -> str:
         if not routing_key:
             if q := RabbitQueue.validate(queue):

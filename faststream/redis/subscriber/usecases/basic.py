@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from redis.asyncio.client import Redis
 
     from faststream._internal.endpoint.publisher import BasePublisherProto
-    from faststream._internal.state import BrokerState, Pointer
+    from faststream._internal.di import BrokerState, Pointer
     from faststream._internal.types import (
         CustomCallable,
     )

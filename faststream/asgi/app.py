@@ -11,7 +11,7 @@ import anyio
 from faststream._internal._compat import HAS_TYPER, ExceptionGroup
 from faststream._internal.application import Application
 from faststream._internal.constants import EMPTY
-from faststream._internal.log import logger
+from faststream._internal.logger import logger
 from faststream.asgi.response import AsgiResponse
 from faststream.asgi.websocket import WebSocketClose
 from faststream.exceptions import StartupValidationError

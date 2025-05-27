@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.endpoint.subscriber.call_item import HandlerItem
     from faststream._internal.producer import ProducerProto
-    from faststream._internal.state import BrokerState, Pointer
+    from faststream._internal.di import FastDependsConfig
     from faststream._internal.types import (
         BrokerMiddleware,
         CustomCallable,
@@ -34,19 +34,14 @@ class SubscriberProto(Endpoint[MsgType]):
 
     def register(self, config: "BrokerConfig", /) -> None: ...
 
+    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None: ...
+
     @abstractmethod
     def get_log_context(
         self,
         msg: Optional["StreamMessage[MsgType]"],
         /,
     ) -> dict[str, str]: ...
-
-    @abstractmethod
-    def _setup(
-        self,
-        *,
-        state: "Pointer[BrokerState]",
-    ) -> None: ...
 
     @abstractmethod
     def _make_response_publisher(

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from logging import LogRecord
 from typing import TYPE_CHECKING, TextIO
 
-from faststream._internal.log.formatter import ColourizedFormatter
+from .formatter import ColourizedFormatter
 
 if TYPE_CHECKING:
     from faststream._internal.context.repository import ContextRepo
@@ -95,5 +95,6 @@ def _handler_exists(logger: logging.Logger) -> bool:
 logger = get_logger(
     name="faststream",
     log_level=logging.INFO,
-    stream=sys.stderr, fmt="%(asctime)s %(levelname)8s - %(message)s",
+    stream=sys.stderr,
+    fmt="%(asctime)s %(levelname)8s - %(message)s",
 )

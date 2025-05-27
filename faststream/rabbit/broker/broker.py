@@ -2,7 +2,6 @@ import logging
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
-    Annotated,
     Any,
     Callable,
     Optional,
@@ -13,11 +12,12 @@ from urllib.parse import urlparse
 
 import anyio
 from aio_pika import IncomingMessage, RobustConnection, connect_robust
-from typing_extensions import Doc, deprecated, override
+from typing_extensions import override
 
 from faststream.__about__ import SERVICE_NAME
 from faststream._internal.broker.broker import ABCBroker, BrokerUsecase
 from faststream._internal.constants import EMPTY
+from faststream._internal.di import FastDependsConfig
 from faststream.message import gen_cor_id
 from faststream.rabbit.configs import RabbitBrokerConfig
 from faststream.rabbit.helpers.channel_manager import ChannelManagerImpl
@@ -101,10 +101,7 @@ class RabbitBroker(
         parser: Optional["CustomCallable"] = None,
         dependencies: Iterable["Dependant"] = (),
         middlewares: Sequence["BrokerMiddleware[IncomingMessage]"] = (),
-        routers: Annotated[
-            Sequence["ABCBroker[IncomingMessage]"],
-            Doc("Routers to apply to broker."),
-        ] = (),
+        routers: Sequence["ABCBroker[IncomingMessage]"] = (),
         # AsyncAPI args
         security: Optional["BaseSecurity"] = None,
         specification_url: Optional[str] = None,
@@ -115,10 +112,6 @@ class RabbitBroker(
         # logging args
         logger: Optional["LoggerProto"] = EMPTY,
         log_level: int = logging.INFO,
-        log_fmt: Annotated[
-            Optional[str],
-            deprecated("Use `logger` instead. Will be removed in the 0.7.0 release."),
-        ] = None,
         # FastDepends args
         apply_types: bool = True,
         serializer: Optional["SerializerProto"] = EMPTY,
@@ -153,7 +146,6 @@ class RabbitBroker(
             tags: AsyncAPI server tags.
             logger: User-specified logger to pass into Context and log service messages.
             log_level: Service messages log level.
-            log_fmt: Default logger log format.
             apply_types: Whether to use FastDepends or not.
             serializer: FastDepends-compatible serializer to validate incoming messages.
             _get_dependant: Custom library dependant generator callback.
@@ -209,6 +201,16 @@ class RabbitBroker(
                 broker_middlewares=middlewares,
                 broker_parser=parser,
                 broker_decoder=decoder,
+                logger=make_rabbit_logger_state(
+                    logger=logger,
+                    log_level=log_level,
+                ),
+                fd_config=FastDependsConfig(
+                    use_fastdepends=apply_types,
+                    serializer=serializer,
+                    get_dependent=_get_dependant,
+                    call_decorators=_call_decorators,
+                ),
                 # subscriber args
                 broker_dependencies=dependencies,
                 graceful_timeout=graceful_timeout,
@@ -223,22 +225,9 @@ class RabbitBroker(
             protocol_version=protocol_version,
             security=security,
             tags=tags,
-            # Logging args
-            logger_state=make_rabbit_logger_state(
-                logger=logger,
-                log_level=log_level,
-                log_fmt=log_fmt,
-            ),
-            # FastDepends args
-            apply_types=apply_types,
-            serializer=serializer,
-            _get_dependant=_get_dependant,
-            _call_decorators=_call_decorators,
         )
 
         self._channel = None
-
-        self._state.patch_value(producer=producer)
 
     @override
     async def _connect(self) -> "RobustConnection":

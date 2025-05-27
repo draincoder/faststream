@@ -16,7 +16,6 @@ from faststream._internal.endpoint.call_wrapper import (
     HandlerCallWrapper,
 )
 from faststream._internal.endpoint.utils import process_msg
-from faststream._internal.state import BrokerState, EmptyBrokerState, Pointer
 from faststream._internal.types import (
     MsgType,
     P_HandlerParams,
@@ -29,6 +28,7 @@ from .proto import PublisherProto
 if TYPE_CHECKING:
     from faststream._internal.broker import BrokerConfig
     from faststream._internal.producer import ProducerProto
+    from faststream._internal.di import FastDependsConfig
     from faststream._internal.types import (
         PublisherMiddleware,
     )
@@ -49,10 +49,6 @@ class PublisherUsecase(PublisherProto[MsgType]):
         self._fake_handler = False
         self.mock: Optional[MagicMock] = None
 
-        self._state: Pointer[BrokerState] = Pointer(
-            EmptyBrokerState("You should include publisher to any broker.")
-        )
-
     def register(self, config: "BrokerConfig", /) -> None:
         self._outer_config = final_config = config | self._outer_config
         self.include_in_schema = final_config.include_in_schema
@@ -62,12 +58,9 @@ class PublisherUsecase(PublisherProto[MsgType]):
         return self._outer_config.producer
 
     @override
-    def _setup(
-        self,
-        *,
-        state: "Pointer[BrokerState]",
-    ) -> None:
-        self._state = state
+    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None:
+        if config:
+            self._outer_config.fd_config = config | self._outer_config.fd_config
 
     def set_test(
         self,
@@ -130,7 +123,7 @@ class PublisherUsecase(PublisherProto[MsgType]):
 
         published_msg = await request(cmd)
 
-        context = self._state.get().di_state.context
+        context = self._outer_config.fd_config.context
 
         response_msg: Any = await process_msg(
             msg=published_msg,
@@ -148,7 +141,7 @@ class PublisherUsecase(PublisherProto[MsgType]):
         self,
         extra_middlewares: Iterable["PublisherMiddleware"] = (),
     ) -> Generator["PublisherMiddleware", None, None]:
-        context = self._state.get().di_state.context
+        context = self._outer_config.fd_config.context
 
         yield from chain(
             self.middlewares[::-1],

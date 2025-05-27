@@ -25,7 +25,7 @@ from faststream.nats.subscriber.state import (
 if TYPE_CHECKING:
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.producer import ProducerProto
-    from faststream._internal.state import (
+    from faststream._internal.di import (
         BrokerState as BasicState,
         Pointer,
     )

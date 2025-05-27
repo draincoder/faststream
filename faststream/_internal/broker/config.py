@@ -2,7 +2,9 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
+from faststream._internal.logger import LoggerState
 from faststream._internal.producer import ProducerProto, ProducerUnset
+from faststream._internal.di import FastDependsConfig
 
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
@@ -20,7 +22,10 @@ class BrokerConfig:
     broker_middlewares: Sequence["BrokerMiddleware[MsgType]"]
     broker_parser: Optional["AsyncCallable"] = None
     broker_decoder: Optional["AsyncCallable"] = None
+
     producer: "ProducerProto" = field(default_factory=ProducerUnset)
+    logger: LoggerState = field(default_factory=LoggerState)
+    fd_config: "FastDependsConfig" = field(default_factory=FastDependsConfig)
 
     # subscriber options
     broker_dependencies: Iterable["Dependant"]
@@ -47,6 +52,8 @@ class BrokerConfig:
             "extra_context": {**value.extra_context, **self.extra_context},
             "graceful_timeout": self.graceful_timeout,
             "producer": self.producer,
+            "logger": self.logger,
+            "fd_config": self.fd_config,
         }
 
     def _solve_include_in_schema(self, value: "BrokerConfig", /) -> bool:

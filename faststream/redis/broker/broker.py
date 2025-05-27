@@ -21,7 +21,7 @@ from redis.asyncio.connection import (
     parse_url,
 )
 from redis.exceptions import ConnectionError
-from typing_extensions import Doc, TypeAlias, deprecated, overload, override
+from typing_extensions import Doc, TypeAlias, overload, override
 
 from faststream.__about__ import __version__
 from faststream._internal.broker.broker import BrokerUsecase
@@ -179,11 +179,6 @@ class RedisBroker(
             int,
             Doc("Service messages log level."),
         ] = logging.INFO,
-        log_fmt: Annotated[
-            Optional[str],
-            deprecated("Use `logger` instead. Will be removed in the 0.7.0 release."),
-            Doc("Default logger log format."),
-        ] = None,
         # FastDepends args
         apply_types: Annotated[
             bool,
@@ -249,7 +244,6 @@ class RedisBroker(
             logger_state=make_redis_logger_state(
                 logger=logger,
                 log_level=log_level,
-                log_fmt=log_fmt,
             ),
             # FastDepends args
             apply_types=apply_types,

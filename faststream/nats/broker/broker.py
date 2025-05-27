@@ -26,7 +26,7 @@ from nats.aio.client import (
 from nats.aio.msg import Msg
 from nats.errors import Error
 from nats.js.errors import BadRequestError
-from typing_extensions import Doc, deprecated, overload, override
+from typing_extensions import Doc, overload, override
 
 from faststream.__about__ import SERVICE_NAME
 from faststream._internal.broker.broker import BrokerUsecase
@@ -416,11 +416,6 @@ class NatsBroker(
             int,
             Doc("Service messages log level."),
         ] = logging.INFO,
-        log_fmt: Annotated[
-            Optional[str],
-            deprecated("Use `logger` instead. Will be removed in the 0.7.0 release."),
-            Doc("Default logger log format."),
-        ] = None,
         # FastDepends args
         apply_types: Annotated[
             bool,
@@ -502,7 +497,6 @@ class NatsBroker(
             logger_state=make_nats_logger_state(
                 logger=logger,
                 log_level=log_level,
-                log_fmt=log_fmt,
             ),
             # FastDepends args
             apply_types=apply_types,

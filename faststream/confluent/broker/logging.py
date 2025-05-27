@@ -1,12 +1,12 @@
 import logging
 from functools import partial
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from faststream._internal.log.logging import get_broker_logger
 from faststream._internal.logger import (
     DefaultLoggerStorage,
     make_logger_state,
 )
+from faststream._internal.logger.logging import get_broker_logger
 
 if TYPE_CHECKING:
     from faststream._internal.basic_types import AnyDict, LoggerProto
@@ -14,11 +14,8 @@ if TYPE_CHECKING:
 
 
 class KafkaParamsStorage(DefaultLoggerStorage):
-    def __init__(
-        self,
-        log_fmt: Optional[str],
-    ) -> None:
-        super().__init__(log_fmt)
+    def __init__(self) -> None:
+        super().__init__()
 
         self._max_topic_len = 4
         self._max_group_len = 0
@@ -28,7 +25,7 @@ class KafkaParamsStorage(DefaultLoggerStorage):
     def set_level(self, level: int) -> None:
         self.logger_log_level = level
 
-    def setup_log_contest(self, params: "AnyDict") -> None:
+    def register_subscriber(self, params: "AnyDict") -> None:
         self._max_topic_len = max(
             (
                 self._max_topic_len,

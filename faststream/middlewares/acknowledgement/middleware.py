@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from faststream._internal.basic_types import AnyDict, AsyncFuncAny
     from faststream._internal.context.repository import ContextRepo
-    from faststream._internal.state import LoggerState
+    from faststream._internal.di import LoggerState
     from faststream.message import StreamMessage
 
 

@@ -39,7 +39,9 @@ __all__ = ("TestRabbitBroker",)
 
 
 @contextmanager
-def change_producer(config: "BrokerConfig", producer: "ProducerProto") -> Generator[None, None, None]:
+def change_producer(
+    config: "BrokerConfig", producer: "ProducerProto"
+) -> Generator[None, None, None]:
     old_producer, config.producer = config.producer, producer
     yield
     config.producer = old_producer

@@ -51,7 +51,6 @@ class LogicSubscriber(SubscriberUsecase["IncomingMessage"]):
 
     def register(self, config: "RabbitBrokerConfig", /) -> None:
         self.app_id = config.app_id
-
         return super().register(config)
 
     def routing(self) -> str:
@@ -136,7 +135,7 @@ class LogicSubscriber(SubscriberUsecase["IncomingMessage"]):
             ) is None:
                 await anyio.sleep(sleep_interval)
 
-        context = self._state.get().di_state.context
+        context = self._outer_config.fd_config.context
 
         msg: Optional[RabbitMessage] = await process_msg(  # type: ignore[assignment]
             msg=raw_message,
@@ -155,7 +154,7 @@ class LogicSubscriber(SubscriberUsecase["IncomingMessage"]):
             not self.calls
         ), "You can't use iterator method if subscriber has registered handlers."
 
-        context = self._state.get().di_state.context
+        context = self._outer_config.fd_config.context
 
         async with self._queue_obj.iterator() as queue_iter:
             async for raw_message in queue_iter:

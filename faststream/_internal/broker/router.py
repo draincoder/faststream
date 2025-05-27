@@ -5,7 +5,6 @@ from typing import (
     Callable,
 )
 
-from faststream._internal.state.broker import EmptyBrokerState
 from faststream._internal.types import MsgType
 
 from .abc_broker import ABCBroker
@@ -67,7 +66,6 @@ class BrokerRouter(ABCBroker[MsgType]):
     ) -> None:
         super().__init__(
             config=config,
-            state=EmptyBrokerState("You should include router to any broker."),
             routers=routers,
         )
 

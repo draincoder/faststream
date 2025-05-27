@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from aiokafka import AIOKafkaConsumer
 
     from faststream._internal.endpoint.publisher import BasePublisherProto
-    from faststream._internal.state import BrokerState, Pointer
     from faststream.kafka.configs import KafkaSubscriberConfig
     from faststream.message import StreamMessage
 
@@ -70,7 +69,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         broker_parser: Optional["CustomCallable"],
         broker_decoder: Optional["CustomCallable"],
         # dependant args
-        state: "Pointer[BrokerState]",
     ) -> None:
         self.client_id = client_id
         self.builder = builder

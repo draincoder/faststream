@@ -14,6 +14,7 @@ import anyio
 from fast_depends import inject
 from fast_depends.core import CallModel, build_call_model
 
+from faststream._internal.constants import EMPTY
 from faststream._internal.types import (
     MsgType,
     P_HandlerParams,
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
     from faststream._internal.basic_types import Decorator
     from faststream._internal.endpoint.publisher import PublisherProto
-    from faststream._internal.state.fast_depends import DIState
+    from faststream._internal.di import FastDependsConfig
     from faststream.message import StreamMessage
 
 
@@ -146,28 +147,38 @@ class HandlerCallWrapper(Generic[MsgType, P_HandlerParams, T_HandlerReturn]):
         *,
         dependencies: Sequence["Dependant"],
         _call_decorators: Reversible["Decorator"],
-        state: "DIState",
+        config: "FastDependsConfig",
     ) -> Optional["CallModel"]:
         call = self._original_call
-        for decor in reversed(_call_decorators):
+        for decor in reversed((*_call_decorators, *config.call_decorators)):
             call = decor(call)
         self._original_call = call
 
         f: Callable[..., Awaitable[Any]] = to_async(call)
 
         dependent: Optional[CallModel] = None
-        if state.get_dependent is None:
+        if config.get_dependent is None:
+            assert config.provider
+
+            if config.serializer is EMPTY:
+                from fast_depends.pydantic import PydanticSerializer
+
+                serializer = PydanticSerializer()
+
+            else:
+                serializer = config.serializer
+
             dependent = build_call_model(
                 f,
                 extra_dependencies=dependencies,
-                dependency_provider=state.provider,
-                serializer_cls=state.serializer,
+                dependency_provider=config.provider,
+                serializer_cls=serializer,
             )
 
-            if state.use_fastdepends:
+            if config.use_fastdepends:
                 wrapper = inject(
                     func=None,
-                    context__=state.context,
+                    context__=config.context,
                 )
                 f = wrapper(func=f, model=dependent)
 

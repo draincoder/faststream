@@ -4,7 +4,6 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
-    Callable,
     Generic,
     Optional,
     Union,
@@ -13,14 +12,6 @@ from typing import (
 from fast_depends import Provider
 from typing_extensions import Doc, Self
 
-from faststream._internal.constants import EMPTY
-from faststream._internal.context.repository import ContextRepo
-from faststream._internal.endpoint.subscriber import SubscriberProto
-from faststream._internal.state import DIState, SetupAble
-from faststream._internal.state.broker import (
-    BrokerState,
-    InitialBrokerState,
-)
 from faststream._internal.types import (
     BrokerMiddleware,
     ConnectionType,
@@ -34,11 +25,11 @@ from .pub_base import BrokerPublishMixin
 if TYPE_CHECKING:
     from types import TracebackType
 
-    from fast_depends.library.serializer import SerializerProto
-
-    from faststream._internal.basic_types import AnyDict, Decorator
-    from faststream._internal.logger import LoggerState
+    from faststream._internal.context.repository import ContextRepo
+    from faststream._internal.endpoint.publisher import PublisherProto
+    from faststream._internal.endpoint.subscriber import SubscriberProto
     from faststream._internal.producer import ProducerProto
+    from faststream._internal.di import FastDependsConfig
     from faststream.security import BaseSecurity
     from faststream.specification.schema.extra import Tag, TagDict
 
@@ -47,7 +38,6 @@ if TYPE_CHECKING:
 
 class BrokerUsecase(
     ABCBroker[MsgType],
-    SetupAble,
     ServerSpecification,
     BrokerPublishMixin[MsgType],
     Generic[MsgType, ConnectionType],
@@ -67,22 +57,6 @@ class BrokerUsecase(
         routers: Annotated[
             Sequence["ABCBroker[MsgType]"],
             Doc("Routers to apply to broker."),
-        ],
-        # Logging args
-        logger_state: "LoggerState",
-        # FastDepends args
-        apply_types: Annotated[
-            bool,
-            Doc("Whether to use FastDepends or not."),
-        ],
-        serializer: Optional["SerializerProto"] = EMPTY,
-        _get_dependant: Annotated[
-            Optional[Callable[..., Any]],
-            Doc("Custom library dependant generator callback."),
-        ],
-        _call_decorators: Annotated[
-            Sequence["Decorator"],
-            Doc("Any custom decorator to apply to wrapped functions."),
         ],
         # AsyncAPI kwargs
         protocol: Annotated[
@@ -113,22 +87,9 @@ class BrokerUsecase(
         ],
         **connection_kwargs: Any,
     ) -> None:
-        state = InitialBrokerState(
-            di_state=DIState(
-                use_fastdepends=apply_types,
-                get_dependent=_get_dependant,
-                call_decorators=_call_decorators,
-                serializer=serializer,
-                provider=Provider(),
-                context=ContextRepo(),
-            ),
-            logger_state=logger_state,
-        )
-
         super().__init__(
             routers=routers,
             config=config,
-            state=state,
         )
 
         self.running = False
@@ -154,11 +115,11 @@ class BrokerUsecase(
 
     @property
     def context(self) -> "ContextRepo":
-        return self._state.get().di_state.context
+        return self.config.fd_config.context
 
     @property
     def provider(self) -> Provider:
-        return self._state.get().di_state.provider
+        return self.config.fd_config.provider
 
     async def __aenter__(self) -> "Self":
         await self.connect()
@@ -176,10 +137,8 @@ class BrokerUsecase(
     async def start(self) -> None:
         """Start the broker async use case."""
         # TODO: filter by already running handlers after TestClient refactor
-        state = self._state.get()
-
         for sub in self._subscribers:
-            state.logger_state.log(
+            self.config.logger.log(
                 f"`{sub.call_name}` waiting for messages",
                 extra=sub.get_log_context(None),
             )
@@ -189,14 +148,13 @@ class BrokerUsecase(
             self.running = True
 
     def _setup_logger_state(self) -> None:
-        state = self._state.get()
-
         for subscriber in self._subscribers:
             log_context = subscriber.get_log_context(None)
             log_context.pop("message_id", None)
-            state.logger_state.params_storage.setup_log_contest(log_context)
 
-        state._setup_logger_state()
+            self.config.logger.params_storage.register_subscriber(log_context)
+
+        self.config.logger._setup(context=self.context)
 
     async def connect(self) -> ConnectionType:
         """Connect to a remote server."""
@@ -209,44 +167,16 @@ class BrokerUsecase(
         """Connect to a resource."""
         raise NotImplementedError
 
-    def _setup(self, state: Optional["BrokerState"] = None) -> None:
+    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None:
         """Prepare all Broker entities to startup.
 
-        Method should be idempotent due could be called twice
+        Method should be idempotent due could be called twice.
         """
-        broker_state = self._state.get()
-        current_di_state = broker_state.di_state
-        broker_serializer = current_di_state.serializer
+        if config:
+            self.config.fd_config = config | self.config.fd_config
 
         self._setup_logger_state()
 
-        if state is not None:
-            di_state = state.di_state
-
-            if broker_serializer is EMPTY:
-                broker_serializer = di_state.serializer
-
-            current_di_state.update(
-                serializer=broker_serializer,
-                provider=di_state.provider,
-                context=di_state.context,
-            )
-
-        else:
-            # Fallback to default state if there no
-            # parent container like FastStream object
-            if broker_serializer is EMPTY:
-                from fast_depends.pydantic import PydanticSerializer
-
-                broker_serializer = PydanticSerializer()
-
-            current_di_state.update(
-                serializer=broker_serializer,
-            )
-
-        broker_state._setup()
-
-        # TODO: move setup to object creation
         for h in self._subscribers:
             self.setup_subscriber(h)
 
@@ -255,17 +185,14 @@ class BrokerUsecase(
 
     def setup_subscriber(
         self,
-        subscriber: SubscriberProto[MsgType],
-        **kwargs: Any,
+        subscriber: "SubscriberProto[MsgType]",
     ) -> None:
         """Setup the Subscriber to prepare it to starting."""
-        data = self._subscriber_setup_extra.copy()
-        data.update(kwargs)
-        subscriber._setup(**data, state=self._state)
+        subscriber._setup(self.config.fd_config)
 
-    @property
-    def _subscriber_setup_extra(self) -> "AnyDict":
-        return {}
+    def setup_publisher(self, publisher: "PublisherProto[MsgType]") -> None:
+        """Setup the Publisher to prepare it to starting."""
+        publisher._setup(self.config.fd_config)
 
     async def close(
         self,
