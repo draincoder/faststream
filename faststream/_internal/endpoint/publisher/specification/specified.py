@@ -65,7 +65,7 @@ class SpecificationPublisher(SpecificationEndpoint[MsgType, PublisherSpec]):
                 call_model = build_call_model(
                     call,
                     dependency_provider=di_state.provider,
-                    serializer_cls=di_state.serializer,
+                    serializer_cls=di_state._serializer,
                 )
 
                 response_type = next(

@@ -22,10 +22,21 @@ from faststream._internal.utils.functions import sync_fake_context
 if TYPE_CHECKING:
     from types import TracebackType
 
+    from faststream._internal.broker import BrokerConfig
     from faststream._internal.endpoint.subscriber import SubscriberProto
+    from faststream._internal.producer import ProducerProto
 
 
 Broker = TypeVar("Broker", bound=BrokerUsecase[Any, Any])
+
+
+@contextmanager
+def change_producer(
+    config: "BrokerConfig", producer: "ProducerProto"
+) -> Generator[None, None, None]:
+    old_producer, config.producer = config.producer, producer
+    yield
+    config.producer = old_producer
 
 
 class TestBroker(Generic[Broker]):

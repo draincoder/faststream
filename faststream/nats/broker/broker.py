@@ -31,9 +31,13 @@ from typing_extensions import Doc, overload, override
 from faststream.__about__ import SERVICE_NAME
 from faststream._internal.broker.broker import BrokerUsecase
 from faststream._internal.constants import EMPTY
+from faststream._internal.di import FastDependsConfig
 from faststream.message import gen_cor_id
-from faststream.nats.helpers import KVBucketDeclarer, OSBucketDeclarer
-from faststream.nats.publisher.producer import NatsFastProducer, NatsJSFastProducer
+from faststream.nats.configs import NatsBrokerConfig
+from faststream.nats.publisher.producer import (
+    NatsFastProducerImpl,
+    NatsJSFastProducer,
+)
 from faststream.nats.response import NatsPublishCommand
 from faststream.nats.security import parse_security
 from faststream.nats.subscriber.usecases.basic import LogicSubscriber
@@ -41,7 +45,6 @@ from faststream.response.publish_type import PublishType
 
 from .logging import make_nats_logger_state
 from .registrator import NatsRegistrator
-from .state import BrokerState, ConnectedState, EmptyBrokerState
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -71,7 +74,6 @@ if TYPE_CHECKING:
         CustomCallable,
     )
     from faststream.nats.message import NatsMessage
-    from faststream.nats.publisher.usecase import LogicPublisher
     from faststream.nats.schemas import PubAck
     from faststream.security import BaseSecurity
     from faststream.specification.schema.extra import Tag, TagDict
@@ -215,10 +217,7 @@ class NatsBroker(
 
     url: list[str]
 
-    _producer: "NatsFastProducer"
-    _js_producer: "NatsJSFastProducer"
-    _kv_declarer: "KVBucketDeclarer"
-    _os_declarer: "OSBucketDeclarer"
+    config: "NatsBrokerConfig"
 
     def __init__(
         self,
@@ -444,6 +443,16 @@ class NatsBroker(
         else:
             specification_url = servers
 
+        js_producer = NatsJSFastProducer(
+            parser=parser,
+            decoder=decoder,
+        )
+
+        producer = NatsFastProducerImpl(
+            parser=parser,
+            decoder=decoder,
+        )
+
         super().__init__(
             # NATS options
             servers=servers,
@@ -479,13 +488,31 @@ class NatsBroker(
             signature_cb=signature_cb,
             user_jwt_cb=user_jwt_cb,
             # Basic args
-            # broker base
-            graceful_timeout=graceful_timeout,
-            dependencies=dependencies,
-            decoder=decoder,
-            parser=parser,
-            middlewares=middlewares,
             routers=routers,
+            config=NatsBrokerConfig(
+                producer=producer,
+                js_producer=js_producer,
+                # both args
+                broker_middlewares=middlewares,
+                broker_parser=parser,
+                broker_decoder=decoder,
+                logger=make_nats_logger_state(
+                    logger=logger,
+                    log_level=log_level,
+                ),
+                fd_config=FastDependsConfig(
+                    use_fastdepends=apply_types,
+                    serializer=serializer,
+                    get_dependent=_get_dependant,
+                    call_decorators=_call_decorators,
+                ),
+                # subscriber args
+                broker_dependencies=dependencies,
+                graceful_timeout=graceful_timeout,
+                extra_context={
+                    "broker": self,
+                },
+            ),
             # AsyncAPI
             description=description,
             specification_url=specification_url,
@@ -493,47 +520,11 @@ class NatsBroker(
             protocol_version=protocol_version,
             security=security,
             tags=tags,
-            # logging
-            logger_state=make_nats_logger_state(
-                logger=logger,
-                log_level=log_level,
-            ),
-            # FastDepends args
-            apply_types=apply_types,
-            serializer=serializer,
-            _get_dependant=_get_dependant,
-            _call_decorators=_call_decorators,
         )
-
-        self._state.patch_value(
-            producer=NatsFastProducer(
-                parser=self._parser,
-                decoder=self._decoder,
-            )
-        )
-
-        self._js_producer = NatsJSFastProducer(
-            decoder=self._decoder,
-            parser=self._parser,
-        )
-
-        self._kv_declarer = KVBucketDeclarer()
-        self._os_declarer = OSBucketDeclarer()
-
-        self._connection_state: BrokerState = EmptyBrokerState()
 
     async def _connect(self) -> "Client":
         connection = await nats.connect(**self._connection_kwargs)
-
-        stream = connection.jetstream()
-
-        self._producer.connect(connection)
-        self._js_producer.connect(stream)
-
-        self._kv_declarer.connect(stream)
-        self._os_declarer.connect(stream)
-
-        self._connection_state = ConnectedState(connection, stream)
+        self.config.connect(connection)
         return connection
 
     async def close(
@@ -548,19 +539,14 @@ class NatsBroker(
             await self._connection.drain()
             self._connection = None
 
-        self._producer.disconnect()
-        self._js_producer.disconnect()
-        self._kv_declarer.disconnect()
-        self._os_declarer.disconnect()
-
-        self._connection_state = EmptyBrokerState()
+        self.config.disconnect()
 
     async def start(self) -> None:
         """Connect broker to NATS cluster and startup all subscribers."""
         await self.connect()
         self._setup()
 
-        stream_context = self._connection_state.stream
+        stream_context = self.config.connection_state.stream
 
         for stream in filter(
             lambda x: x.declare,
@@ -580,7 +566,7 @@ class NatsBroker(
                     stream=stream.name,
                 )
 
-                logger_state = self._state.get().logger_state
+                logger_state = self._outer_config.logger
 
                 if (
                     e.description
@@ -686,7 +672,9 @@ class NatsBroker(
             _publish_type=PublishType.PUBLISH,
         )
 
-        producer = self._js_producer if stream is not None else self._producer
+        producer = (
+            self.config.js_producer if stream is not None else self.config.producer
+        )
 
         return await super()._basic_publish(cmd, producer=producer)
 
@@ -737,31 +725,12 @@ class NatsBroker(
             _publish_type=PublishType.REQUEST,
         )
 
-        producer = self._js_producer if stream is not None else self._producer
+        producer = (
+            self.config.js_producer if stream is not None else self.config.producer
+        )
 
         msg: NatsMessage = await super()._basic_request(cmd, producer=producer)
         return msg
-
-    @override
-    def setup_subscriber(  # type: ignore[override]
-        self,
-        subscriber: "LogicSubscriber",
-    ) -> None:
-        return super().setup_subscriber(
-            subscriber,
-            connection_state=self._connection_state,
-            kv_declarer=self._kv_declarer,
-            os_declarer=self._os_declarer,
-        )
-
-    @override
-    def setup_publisher(  # type: ignore[override]
-        self,
-        publisher: "LogicPublisher",
-    ) -> None:
-        producer = self._js_producer if publisher.stream is not None else self._producer
-
-        super().setup_publisher(publisher, producer=producer)
 
     async def key_value(
         self,
@@ -780,7 +749,7 @@ class NatsBroker(
         # custom
         declare: bool = True,
     ) -> "KeyValue":
-        return await self._kv_declarer.create_key_value(
+        return await self.config.kv_declarer.create_key_value(
             bucket=bucket,
             description=description,
             max_value_size=max_value_size,
@@ -808,7 +777,7 @@ class NatsBroker(
         # custom
         declare: bool = True,
     ) -> "ObjectStore":
-        return await self._os_declarer.create_object_store(
+        return await self.config.os_declarer.create_object_store(
             bucket=bucket,
             description=description,
             ttl=ttl,
@@ -829,14 +798,13 @@ class NatsBroker(
             if error_cb is not None:
                 await error_cb(err)
 
-            if isinstance(err, Error) and self._connection_state:
-                self._state.get().logger_state.log(
+            if isinstance(err, Error) and self.config.connection_state:
+                self.config.logger.log(
                     f"Connection broken with {err!r}",
                     logging.WARNING,
                     c,
                     exc_info=err,
                 )
-                self._connection_state = self._connection_state.brake()
 
         return wrapper
 
@@ -850,11 +818,8 @@ class NatsBroker(
             if cb is not None:
                 await cb()
 
-            if not self._connection_state:
-                self._state.get().logger_state.log(
-                    "Connection established", logging.INFO, c
-                )
-                self._connection_state = self._connection_state.reconnect()
+            if not self.config.connection_state:
+                self.config.logger.log("Connection established", logging.INFO, c)
 
         return wrapper
 

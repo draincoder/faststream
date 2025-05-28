@@ -30,6 +30,59 @@ if TYPE_CHECKING:
 
 
 class NatsFastProducer(ProducerProto):
+    def connect(self, connection: "Client") -> None: ...
+
+    def disconnect(self) -> None: ...
+
+    @override
+    async def publish(  # type: ignore[override]
+        self,
+        cmd: "NatsPublishCommand",
+    ) -> None: ...
+
+    @override
+    async def request(  # type: ignore[override]
+        self,
+        cmd: "NatsPublishCommand",
+    ) -> "Msg": ...
+
+    @override
+    async def publish_batch(
+        self,
+        cmd: "NatsPublishCommand",
+    ) -> None: ...
+
+
+class FakeNatsFastProducer(ProducerProto):
+    def connect(self, connection: "Client") -> None:
+        raise NotImplementedError
+
+    def disconnect(self) -> None:
+        raise NotImplementedError
+
+    @override
+    async def publish(  # type: ignore[override]
+        self,
+        cmd: "NatsPublishCommand",
+    ) -> None:
+        raise NotImplementedError
+
+    @override
+    async def request(  # type: ignore[override]
+        self,
+        cmd: "NatsPublishCommand",
+    ) -> "Msg":
+        raise NotImplementedError
+
+    @override
+    async def publish_batch(
+        self,
+        cmd: "NatsPublishCommand",
+    ) -> None:
+        raise NotImplementedError
+
+
+class NatsFastProducerImpl(NatsFastProducer):
     """A class to represent a NATS producer."""
 
     _decoder: "AsyncCallable"
@@ -99,7 +152,7 @@ class NatsFastProducer(ProducerProto):
         raise FeatureNotSupportedException(msg)
 
 
-class NatsJSFastProducer(ProducerProto):
+class NatsJSFastProducer(NatsFastProducer):
     """A class to represent a NATS JetStream producer."""
 
     _decoder: "AsyncCallable"

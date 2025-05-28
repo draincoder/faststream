@@ -12,7 +12,7 @@ from pamqp.header import ContentHeader
 from typing_extensions import override
 
 from faststream._internal.endpoint.utils import resolve_custom_func
-from faststream._internal.testing.broker import TestBroker
+from faststream._internal.testing.broker import TestBroker, change_producer
 from faststream.exceptions import SubscriberNotFound
 from faststream.message import gen_cor_id
 from faststream.rabbit.broker.broker import RabbitBroker
@@ -27,8 +27,6 @@ from faststream.rabbit.schemas import (
 if TYPE_CHECKING:
     from aio_pika.abc import DateType, HeadersType
 
-    from faststream._internal.broker import BrokerConfig
-    from faststream._internal.producer import ProducerProto
     from faststream.rabbit.publisher.specified import SpecificationPublisher
     from faststream.rabbit.response import RabbitPublishCommand
     from faststream.rabbit.subscriber.usecase import LogicSubscriber
@@ -36,15 +34,6 @@ if TYPE_CHECKING:
 
 
 __all__ = ("TestRabbitBroker",)
-
-
-@contextmanager
-def change_producer(
-    config: "BrokerConfig", producer: "ProducerProto"
-) -> Generator[None, None, None]:
-    old_producer, config.producer = config.producer, producer
-    yield
-    config.producer = old_producer
 
 
 class TestRabbitBroker(TestBroker[RabbitBroker]):

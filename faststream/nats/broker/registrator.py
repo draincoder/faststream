@@ -239,12 +239,11 @@ class NatsRegistrator(ABCBroker["Msg"]):
                     ack_policy=ack_policy,
                     no_ack=no_ack,
                     no_reply=no_reply,
-                    broker_middlewares=self.middlewares,
-                    broker_dependencies=self._dependencies,
+                    broker_config=self.config,
                     # AsyncAPI
                     title_=title,
                     description_=description,
-                    include_in_schema=self._solve_include_in_schema(include_in_schema),
+                    include_in_schema=include_in_schema,
                 ),
             ),
         )
@@ -253,8 +252,8 @@ class NatsRegistrator(ABCBroker["Msg"]):
             stream.add_subject(subscriber.subject)
 
         return subscriber.add_call(
-            parser_=parser or self._parser,
-            decoder_=decoder or self._decoder,
+            parser_=parser,
+            decoder_=decoder,
             dependencies_=dependencies,
             middlewares_=middlewares,
         )
@@ -342,13 +341,13 @@ class NatsRegistrator(ABCBroker["Msg"]):
                     timeout=timeout,
                     stream=stream,
                     # Specific
-                    broker_middlewares=self.middlewares,
+                    broker_config=self.config,
                     middlewares=middlewares,
                     # AsyncAPI
                     title_=title,
                     description_=description,
                     schema_=schema,
-                    include_in_schema=self._solve_include_in_schema(include_in_schema),
+                    include_in_schema=include_in_schema,
                 ),
             ),
         )
@@ -383,7 +382,7 @@ class NatsRegistrator(ABCBroker["Msg"]):
             new_subjects = []
             for subj in stream.subjects:
                 if subj in sub_router_subjects:
-                    new_subjects.append(f"{self.prefix}{subj}")
+                    new_subjects.append(f"{self.config.prefix}{subj}")
                 else:
                     new_subjects.append(subj)
             stream.subjects = new_subjects

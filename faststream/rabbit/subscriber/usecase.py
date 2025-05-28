@@ -47,11 +47,9 @@ class LogicSubscriber(SubscriberUsecase["IncomingMessage"]):
         self._queue_obj = None
         self.channel = config.channel
 
-        self.app_id = self._outer_config.app_id
-
-    def register(self, config: "RabbitBrokerConfig", /) -> None:
-        self.app_id = config.app_id
-        return super().register(config)
+    @property
+    def app_id(self) -> str:
+        return self._outer_config.app_id
 
     def routing(self) -> str:
         return f"{self._outer_config.prefix}{self.queue.routing()}"

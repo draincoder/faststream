@@ -7,21 +7,18 @@ from typing import (
     Protocol,
 )
 
-from typing_extensions import ReadOnly
-
 from faststream._internal.endpoint.usecase import Endpoint
 from faststream._internal.types import MsgType
-from faststream.response.response import PublishCommand
 
 if TYPE_CHECKING:
+    from typing_extensions import ReadOnly
+
     from faststream._internal.basic_types import SendableMessage
     from faststream._internal.broker import BrokerConfig
     from faststream._internal.di import FastDependsConfig
-    from faststream._internal.types import (
-        BrokerMiddleware,
-        PublisherMiddleware,
-    )
-    from faststream.response.response import PublishCommand
+    from faststream._internal.producer import ProducerProto
+    from faststream._internal.types import BrokerMiddleware, PublisherMiddleware
+    from faststream.response import PublishCommand
 
 
 class BasePublisherProto(Protocol):
@@ -70,7 +67,7 @@ class PublisherProto(
 ):
     _broker_middlewares: Sequence["BrokerMiddleware[MsgType]"]
     _middlewares: Sequence["PublisherMiddleware"]
-    _producer: ReadOnly["ProducerProto"]
+    _producer: "ReadOnly[ProducerProto]"
 
     @abstractmethod
     def register(self, config: "BrokerConfig", /) -> None: ...

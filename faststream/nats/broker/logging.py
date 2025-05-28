@@ -47,10 +47,10 @@ class NatsParamsStorage(DefaultLoggerStorage):
         )
 
     def get_logger(self, *, context: "ContextRepo") -> "LoggerProto":
-        message_id_ln = 10
-
         # TODO: generate unique logger names to not share between brokers
         if not (lg := self._get_logger_ref()):
+            message_id_ln = 10
+
             lg = get_broker_logger(
                 name="nats",
                 default_context={
@@ -59,8 +59,7 @@ class NatsParamsStorage(DefaultLoggerStorage):
                     "queue": "",
                 },
                 message_id_ln=message_id_ln,
-                fmt=self._log_fmt
-                or "".join((
+                fmt="".join((
                     "%(asctime)s %(levelname)-8s - ",
                     (
                         f"%(stream)-{self._max_stream_len}s | "

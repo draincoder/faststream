@@ -19,7 +19,7 @@ class BrokerConfig:
     prefix: str = ""
     include_in_schema: Optional[bool] = True
 
-    broker_middlewares: Sequence["BrokerMiddleware[MsgType]"]
+    broker_middlewares: Sequence["BrokerMiddleware[MsgType]"] = ()
     broker_parser: Optional["AsyncCallable"] = None
     broker_decoder: Optional["AsyncCallable"] = None
 
@@ -28,7 +28,7 @@ class BrokerConfig:
     fd_config: "FastDependsConfig" = field(default_factory=FastDependsConfig)
 
     # subscriber options
-    broker_dependencies: Iterable["Dependant"]
+    broker_dependencies: Iterable["Dependant"] = ()
     graceful_timeout: Optional[float] = None
     extra_context: "AnyDict" = field(default_factory=dict)
 

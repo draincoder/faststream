@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from .broker import NatsBrokerConfig
 from .specification import (
     NatsPublisherSpecificationConfig,
     NatsSubscriberSpecificationConfig,
@@ -20,6 +21,7 @@ class NatsPublisherConfigFacade(NatsPublisherSpecificationConfig, NatsPublisherC
 
 
 __all__ = (
+    "NatsBrokerConfig",
     "NatsPublisherConfig",
     "NatsPublisherConfigFacade",
     "NatsPublisherSpecificationConfig",

@@ -10,10 +10,8 @@ if TYPE_CHECKING:
 class BaseRMQInformation:
     """Base class to store Specification RMQ bindings."""
 
-    virtual_host: str
     queue: "RabbitQueue"
     exchange: "RabbitExchange"
-    app_id: Optional[str]
 
     def __init__(self, config: "RabbitSpecificationConfig", /, **kwargs: Any) -> None:
         super().__init__(config, **kwargs)
@@ -21,6 +19,12 @@ class BaseRMQInformation:
         self.queue = config.queue
         self.exchange = config.exchange
 
-        # Setup it later
-        self.app_id = config.config.app_id
-        self.virtual_host = config.config.virtual_host
+        self._outer_config = config.config
+
+    @property
+    def virtual_host(self) -> str:
+        return self._outer_config.virtual_host
+
+    @property
+    def app_id(self) -> Optional[str]:
+        return self._outer_config.app_id

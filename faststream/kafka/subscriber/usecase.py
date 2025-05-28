@@ -53,36 +53,18 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         self._listener = config.listener
         self._connection_args = config.connection_args
 
-        # Setup it later
-        self.client_id = ""
-        self.builder = None
-
         self.consumer = None
 
-    @override
-    def _setup(  # type: ignore[override]
-        self,
-        *,
-        client_id: Optional[str],
-        builder: Callable[..., "AIOKafkaConsumer"],
-        # broker base_configs
-        broker_parser: Optional["CustomCallable"],
-        broker_decoder: Optional["CustomCallable"],
-        # dependant args
-    ) -> None:
-        self.client_id = client_id
-        self.builder = builder
+    @property
+    def builder(self):
+        return self._outer_config.builder
 
-        super()._setup(
-            broker_parser=broker_parser,
-            broker_decoder=broker_decoder,
-            state=state,
-        )
+    @property
+    def client_id(self) -> str:
+        return self._outer_config.client_id
 
     async def start(self) -> None:
         """Start the consumer."""
-        assert self.builder, "You should setup subscriber at first."  # nosec B101
-
         self.consumer = consumer = self.builder(
             group_id=self.group_id,
             client_id=self.client_id,
