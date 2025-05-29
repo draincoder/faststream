@@ -122,7 +122,7 @@ class FastAPITestcase(BaseTestcaseConfig):
 
     async def test_context_annotated(
         self, mock: Mock, queue: str, event: asyncio.Event
-    ):
+    ) -> None:
         event = asyncio.Event()
 
         router = self.router_class()
@@ -161,7 +161,7 @@ class FastAPITestcase(BaseTestcaseConfig):
         args, kwargs = self.get_subscriber_params(queue)
 
         @router.subscriber(*args, **kwargs)
-        async def hello(msg=FSContext()):
+        async def hello(msg: Any = FSContext()) -> None:
             pass
 
         app = FastAPI()
@@ -176,7 +176,7 @@ class FastAPITestcase(BaseTestcaseConfig):
         args, kwargs = self.get_subscriber_params(queue)
 
         @router.subscriber(*args, **kwargs)
-        async def hello(msg: Annotated[Any, FSContext()]):
+        async def hello(msg: Annotated[Any, FSContext()]) -> None:
             pass
 
         app = FastAPI()

@@ -1,6 +1,6 @@
 import re
 from collections.abc import Generator, Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 from typing import (
     TYPE_CHECKING,
@@ -15,7 +15,7 @@ from aiokafka import ConsumerRecord
 from typing_extensions import override
 
 from faststream._internal.endpoint.utils import resolve_custom_func
-from faststream._internal.testing.broker import TestBroker
+from faststream._internal.testing.broker import TestBroker, change_producer
 from faststream.exceptions import SubscriberNotFound
 from faststream.kafka import TopicPartition
 from faststream.kafka.broker import KafkaBroker
@@ -40,10 +40,18 @@ class TestKafkaBroker(TestBroker[KafkaBroker]):
 
     @contextmanager
     def _patch_producer(self, broker: KafkaBroker) -> Iterator[None]:
-        old_producer = broker._state.get().producer
-        broker._state.patch_value(producer=FakeProducer(broker))
-        yield
-        broker._state.patch_value(producer=old_producer)
+        fake_producer = FakeProducer(broker)
+
+        with ExitStack() as es:
+            es.enter_context(change_producer(broker.config, fake_producer))
+
+            for s in broker._subscribers:
+                es.enter_context(change_producer(s._outer_config, fake_producer))
+
+            for p in broker._publishers:
+                es.enter_context(change_producer(p._outer_config, fake_producer))
+
+            yield
 
     @staticmethod
     async def _fake_connect(  # type: ignore[override]
@@ -290,5 +298,5 @@ def _is_handler_matches(
             for p in handler.partitions
         )
         or topic in handler.topics
-        or (handler._pattern and re.match(handler._pattern, topic)),
+        or (handler.pattern and re.match(handler.pattern, topic)),
     )

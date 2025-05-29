@@ -51,8 +51,7 @@ class KafkaParamsStorage(DefaultLoggerStorage):
                     "group_id": "",
                 },
                 message_id_ln=message_id_ln,
-                fmt=self._log_fmt
-                or "".join((
+                fmt="".join((
                     "%(asctime)s %(levelname)-8s - ",
                     f"%(topic)-{self._max_topic_len}s | ",
                     (

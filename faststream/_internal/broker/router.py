@@ -35,7 +35,7 @@ class ArgsContainer:
 class SubscriberRoute(ArgsContainer):
     """A generic class to represent a broker route."""
 
-    __slots__ = ("args", "call", "kwargs", "publishers")
+    __slots__ = ("call", "publishers")
 
     call: Callable[..., Any]
     publishers: Iterable[Any]

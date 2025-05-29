@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from collections.abc import AsyncIterator, Sequence
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import anyio
 from aiokafka import ConsumerRecord, TopicPartition
@@ -12,7 +12,6 @@ from faststream._internal.endpoint.subscriber.mixins import ConcurrentMixin, Tas
 from faststream._internal.endpoint.subscriber.usecase import SubscriberUsecase
 from faststream._internal.endpoint.utils import process_msg
 from faststream._internal.types import (
-    CustomCallable,
     MsgType,
 )
 from faststream._internal.utils.path import compile_path
@@ -25,28 +24,25 @@ if TYPE_CHECKING:
     from aiokafka import AIOKafkaConsumer
 
     from faststream._internal.endpoint.publisher import BasePublisherProto
-    from faststream.kafka.configs import KafkaSubscriberConfig
+    from faststream.kafka.configs import KafkaBrokerConfig, KafkaSubscriberConfig
     from faststream.message import StreamMessage
 
 
 class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
     """A class to handle logic for consuming messages from Kafka."""
 
-    topics: Sequence[str]
-    group_id: Optional[str]
-
-    builder: Optional[Callable[..., "AIOKafkaConsumer"]]
     consumer: Optional["AIOKafkaConsumer"]
 
-    client_id: Optional[str]
     batch: bool
     parser: AioKafkaParser
+
+    _outer_config: "KafkaBrokerConfig"
 
     def __init__(self, config: "KafkaSubscriberConfig", /) -> None:
         super().__init__(config)
 
-        self.topics = config.topics
-        self.partitions = config.partitions
+        self._topics = config.topics
+        self._partitions = config.partitions
         self.group_id = config.group_id
 
         self._pattern = config.pattern
@@ -56,11 +52,31 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         self.consumer = None
 
     @property
+    def pattern(self) -> Optional[str]:
+        if not self._pattern:
+            return self._pattern
+        return f"{self._outer_config.prefix}{self._pattern}"
+
+    @property
+    def topics(self) -> list[str]:
+        return [f"{self._outer_config.prefix}{t}" for t in self._topics]
+
+    @property
+    def partitions(self) -> list[TopicPartition]:
+        return [
+            TopicPartition(
+                topic=f"{self._outer_config.prefix}{p.topic}",
+                partition=p.partition,
+            )
+            for p in self._partitions
+        ]
+
+    @property
     def builder(self):
         return self._outer_config.builder
 
     @property
-    def client_id(self) -> str:
+    def client_id(self) -> Optional[str]:
         return self._outer_config.client_id
 
     async def start(self) -> None:
@@ -73,13 +89,13 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
 
         self.parser._setup(consumer)
 
-        if self.topics or self._pattern:
+        if self.topics or self.pattern:
             consumer.subscribe(
                 topics=self.topics,
-                pattern=self._pattern,
+                pattern=self.pattern,
                 listener=make_logging_listener(
                     consumer=consumer,
-                    logger=self._state.get().logger_state.logger.logger,
+                    logger=self._outer_config.logger.logger.logger,
                     log_extra=self.get_log_context(None),
                     listener=self._listener,
                 ),
@@ -89,7 +105,8 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
             consumer.assign(partitions=self.partitions)
 
         await consumer.start()
-        await super().start()
+
+        self._post_start()
 
         if self.calls:
             self.add_task(self._run_consume_loop(self.consumer))
@@ -123,7 +140,7 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
 
         ((raw_message,),) = raw_messages.values()
 
-        context = self._state.get().di_state.context
+        context = self._outer_config.fd_config.context
 
         return await process_msg(
             msg=raw_message,
@@ -142,7 +159,7 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
         ), "You can't use `get_one` method if subscriber has registered handlers."
 
         async for raw_message in self.consumer:
-            context = self._state.get().di_state.context
+            context = self._outer_config.fd_config.context
             msg: StreamMessage[MsgType] = await process_msg(  # type: ignore[assignment]
                 msg=raw_message,
                 middlewares=(
@@ -159,7 +176,7 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
     ) -> Sequence["BasePublisherProto"]:
         return (
             KafkaFakePublisher(
-                self._state.get().producer,
+                self._outer_config.producer,
                 topic=message.reply_to,
             ),
         )
@@ -197,8 +214,8 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
 
     @property
     def topic_names(self) -> list[str]:
-        if self._pattern:
-            return [self._pattern]
+        if self.pattern:
+            return [self.pattern]
         if self.topics:
             return list(self.topics)
         return [f"{p.topic}-{p.partition}" for p in self.partitions]
@@ -214,17 +231,6 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
             "group_id": group_id or "",
             "message_id": getattr(message, "message_id", ""),
         }
-
-    def add_prefix(self, prefix: str) -> None:
-        self.topics = tuple(f"{prefix}{t}" for t in self.topics)
-
-        self.partitions = [
-            TopicPartition(
-                topic=f"{prefix}{p.topic}",
-                partition=p.partition,
-            )
-            for p in self.partitions
-        ]
 
 
 class DefaultSubscriber(LogicSubscriber["ConsumerRecord"]):
@@ -244,8 +250,8 @@ class DefaultSubscriber(LogicSubscriber["ConsumerRecord"]):
             msg_class=KafkaMessage if config.ack_first else KafkaAckableMessage,
             regex=reg,
         )
-        config.default_parser = self.parser.parse_message
-        config.default_decoder = self.parser.decode_message
+        config.parser = self.parser.parse_message
+        config.decoder = self.parser.decode_message
         super().__init__(config)
 
     async def get_msg(self, consumer: "AIOKafkaConsumer") -> "ConsumerRecord":
@@ -292,8 +298,8 @@ class BatchSubscriber(LogicSubscriber[tuple["ConsumerRecord", ...]]):
             msg_class=KafkaMessage if config.ack_first else KafkaAckableMessage,
             regex=reg,
         )
-        config.default_decoder = self.parser.decode_message
-        config.default_parser = self.parser.parse_message
+        config.decoder = self.parser.decode_message
+        config.parser = self.parser.parse_message
         super().__init__(config)
 
         self.batch_timeout_ms = batch_timeout_ms
@@ -387,7 +393,7 @@ class ConcurrentBetweenPartitionsSubscriber(DefaultSubscriber):
                     topics=self.topics,
                     listener=make_logging_listener(
                         consumer=c,
-                        logger=self._state.get().logger_state.logger.logger,
+                        logger=self._outer_config.logger.logger.logger,
                         log_extra=self.get_log_context(None),
                         listener=self._listener,
                     ),
@@ -395,8 +401,7 @@ class ConcurrentBetweenPartitionsSubscriber(DefaultSubscriber):
 
                 tg.start_soon(c.start)
 
-        # call SubscriberUsecase method
-        await super(LogicSubscriber, self).start()
+        self._post_start()
 
         if self.calls:
             for c in self.consumer_subgroup:

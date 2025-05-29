@@ -19,6 +19,7 @@ from faststream._internal.broker.router import (
 )
 from faststream._internal.constants import EMPTY
 from faststream.kafka.broker.registrator import KafkaRegistrator
+from faststream.kafka.configs import KafkaBrokerConfig
 from faststream.middlewares import AckPolicy
 
 if TYPE_CHECKING:
@@ -638,12 +639,14 @@ class KafkaRouter(
     ) -> None:
         super().__init__(
             handlers=handlers,
-            # basic args
-            prefix=prefix,
-            dependencies=dependencies,
-            middlewares=middlewares,
+            config=KafkaBrokerConfig(
+                broker_middlewares=middlewares,
+                broker_dependencies=dependencies,
+                broker_parser=parser,
+                broker_decoder=decoder,
+                graceful_timeout=None,
+                include_in_schema=include_in_schema,
+                prefix=prefix,
+            ),
             routers=routers,
-            parser=parser,
-            decoder=decoder,
-            include_in_schema=include_in_schema,
         )
