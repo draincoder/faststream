@@ -169,9 +169,10 @@ class AsyncConfluentConsumer:
     def __init__(
         self,
         *topics: str,
-        logger: "LoggerState",
         config: config_module.ConfluentFastConfig,
+        logger: "LoggerState",
         admin_service: "AdminService",
+        # kwargs options
         partitions: Sequence["TopicPartition"],
         bootstrap_servers: Union[str, list[str]] = "localhost",
         # consumer options

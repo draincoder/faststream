@@ -644,7 +644,6 @@ class KafkaRouter(
                 broker_dependencies=dependencies,
                 broker_parser=parser,
                 broker_decoder=decoder,
-                graceful_timeout=None,
                 include_in_schema=include_in_schema,
                 prefix=prefix,
             ),

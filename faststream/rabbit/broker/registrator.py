@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         PublisherMiddleware,
         SubscriberMiddleware,
     )
+    from faststream.rabbit.configs import RabbitBrokerConfig
     from faststream.rabbit.message import RabbitMessage
     from faststream.rabbit.publisher.specified import SpecificationPublisher
 
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 class RabbitRegistrator(ABCBroker["IncomingMessage"]):
     """Includable to RabbitBroker router."""
 
+    config: "RabbitBrokerConfig"
     _subscribers: list["SpecificationSubscriber"]
     _publishers: list["SpecificationPublisher"]
 

@@ -17,8 +17,10 @@ from faststream._internal.broker.router import (
     SubscriberRoute,
 )
 from faststream._internal.constants import EMPTY
-from faststream.confluent.broker.registrator import KafkaRegistrator
+from faststream.confluent.configs import KafkaBrokerConfig
 from faststream.middlewares import AckPolicy
+
+from .registrator import KafkaRegistrator
 
 if TYPE_CHECKING:
     from confluent_kafka import Message
@@ -528,12 +530,13 @@ class KafkaRouter(
     ) -> None:
         super().__init__(
             handlers=handlers,
-            # basic args
-            prefix=prefix,
-            dependencies=dependencies,
-            middlewares=middlewares,  # type: ignore[arg-type]
+            config=KafkaBrokerConfig(
+                broker_middlewares=middlewares,
+                broker_dependencies=dependencies,
+                broker_parser=parser,
+                broker_decoder=decoder,
+                include_in_schema=include_in_schema,
+                prefix=prefix,
+            ),
             routers=routers,
-            parser=parser,
-            decoder=decoder,
-            include_in_schema=include_in_schema,
         )

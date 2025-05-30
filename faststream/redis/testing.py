@@ -1,6 +1,6 @@
 import re
 from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -15,7 +15,7 @@ import anyio
 from typing_extensions import TypedDict, override
 
 from faststream._internal.endpoint.utils import resolve_custom_func
-from faststream._internal.testing.broker import TestBroker
+from faststream._internal.testing.broker import TestBroker, change_producer
 from faststream.exceptions import SetupError, SubscriberNotFound
 from faststream.message import gen_cor_id
 from faststream.redis.broker.broker import RedisBroker
@@ -46,6 +46,21 @@ __all__ = ("TestRedisBroker",)
 class TestRedisBroker(TestBroker[RedisBroker]):
     """A class to test Redis brokers."""
 
+    @contextmanager
+    def _patch_producer(self, broker: RedisBroker) -> Iterator[None]:
+        fake_producer = FakeProducer(broker)
+
+        with ExitStack() as es:
+            es.enter_context(change_producer(broker.config, fake_producer))
+
+            for s in broker._subscribers:
+                es.enter_context(change_producer(s._outer_config, fake_producer))
+
+            for p in broker._publishers:
+                es.enter_context(change_producer(p._outer_config, fake_producer))
+
+            yield
+
     @staticmethod
     def create_publisher_fake_subscriber(
         broker: RedisBroker,
@@ -70,13 +85,6 @@ class TestRedisBroker(TestBroker[RedisBroker]):
             is_real = True
 
         return sub, is_real
-
-    @contextmanager
-    def _patch_producer(self, broker: RedisBroker) -> Iterator[None]:
-        old_producer = broker._state.get().producer
-        broker._state.patch_value(producer=FakeProducer(broker))
-        yield
-        broker._state.patch_value(producer=old_producer)
 
     @staticmethod
     async def _fake_connect(  # type: ignore[override]

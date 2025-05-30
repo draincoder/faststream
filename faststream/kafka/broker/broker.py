@@ -28,9 +28,7 @@ from faststream.exceptions import IncorrectState
 from faststream.kafka.configs import KafkaBrokerConfig
 from faststream.kafka.publisher.producer import AioKafkaFastProducerImpl
 from faststream.kafka.response import KafkaPublishCommand
-from faststream.kafka.schemas.params import (
-    ConsumerConnectionParams,
-)
+from faststream.kafka.schemas.params import ConsumerConnectionParams
 from faststream.kafka.security import parse_security
 from faststream.message import gen_cor_id
 from faststream.response.publish_type import PublishType

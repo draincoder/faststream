@@ -8,7 +8,9 @@ from .basic import BaseTestcaseConfig
 
 
 class IncludeTestcase(BaseTestcaseConfig):
-    def get_object(self, router: Union[BrokerRouter[Any], BrokerUsecase[Any, Any]]) -> Any:
+    def get_object(
+        self, router: Union[BrokerRouter[Any], BrokerUsecase[Any, Any]]
+    ) -> Any:
         raise NotImplementedError
 
     def test_broker_middlewares(self) -> None:
@@ -87,7 +89,9 @@ class IncludeTestcase(BaseTestcaseConfig):
 
 
 class IncludeSubscriberTestcase(IncludeTestcase):
-    def get_object(self, router: Union[BrokerRouter[Any], BrokerUsecase[Any, Any]]) -> Any:
+    def get_object(
+        self, router: Union[BrokerRouter[Any], BrokerUsecase[Any, Any]]
+    ) -> Any:
         return router.subscriber("test")
 
     def test_graceful_timeout(self) -> None:
@@ -144,5 +148,7 @@ class IncludeSubscriberTestcase(IncludeTestcase):
 
 
 class IncludePublisherTestcase(IncludeTestcase):
-    def get_object(self, router: Union[BrokerRouter[Any], BrokerUsecase[Any, Any]]) -> Any:
+    def get_object(
+        self, router: Union[BrokerRouter[Any], BrokerUsecase[Any, Any]]
+    ) -> Any:
         return router.publisher("test")

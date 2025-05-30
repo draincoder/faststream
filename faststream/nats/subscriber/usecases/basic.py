@@ -52,9 +52,7 @@ class LogicSubscriber(SubscriberUsecase[MsgType]):
     @property
     def filter_subjects(self) -> list[str]:
         prefix = self._outer_config.prefix
-        return [
-            f"{prefix}{subject}" for subject in (self.config.filter_subjects or ())
-        ]
+        return [f"{prefix}{subject}" for subject in (self.config.filter_subjects or ())]
 
     @property
     def clear_subject(self) -> str:

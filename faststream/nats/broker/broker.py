@@ -217,8 +217,6 @@ class NatsBroker(
 
     url: list[str]
 
-    config: "NatsBrokerConfig"
-
     def __init__(
         self,
         servers: Annotated[

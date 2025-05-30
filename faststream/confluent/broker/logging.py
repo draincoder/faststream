@@ -20,7 +20,7 @@ class KafkaParamsStorage(DefaultLoggerStorage):
         self._max_topic_len = 4
         self._max_group_len = 0
 
-        self.logger_log_level = logging.INFOw
+        self.logger_log_level = logging.INFO
 
     def set_level(self, level: int) -> None:
         self.logger_log_level = level
@@ -51,8 +51,7 @@ class KafkaParamsStorage(DefaultLoggerStorage):
                     "group_id": "",
                 },
                 message_id_ln=message_id_ln,
-                fmt=self._log_fmt
-                or "".join((
+                fmt="".join((
                     "%(asctime)s %(levelname)-8s - ",
                     f"%(topic)-{self._max_topic_len}s | ",
                     (

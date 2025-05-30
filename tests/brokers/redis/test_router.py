@@ -51,7 +51,7 @@ class TestRouterLocal(RedisMemoryTestcaseConfig, RouterLocalTestcase):
     ) -> None:
         pub_broker = self.get_broker(apply_types=True)
 
-        router = self.get_router("test.")
+        router = self.get_router(prefix="test.")
 
         @router.subscriber("in.{name}.{id}")
         async def h(

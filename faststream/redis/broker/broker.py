@@ -12,10 +12,8 @@ from urllib.parse import urlparse
 
 import anyio
 from anyio import move_on_after
-from redis.asyncio.client import Redis
 from redis.asyncio.connection import (
     Connection,
-    ConnectionPool,
     DefaultParser,
     Encoder,
     parse_url,
@@ -23,10 +21,11 @@ from redis.asyncio.connection import (
 from redis.exceptions import ConnectionError
 from typing_extensions import Doc, TypeAlias, overload, override
 
-from faststream.__about__ import __version__
 from faststream._internal.broker.broker import BrokerUsecase
 from faststream._internal.constants import EMPTY
+from faststream._internal.di import FastDependsConfig
 from faststream.message import gen_cor_id
+from faststream.redis.configs import ConnectionState, RedisBrokerConfig
 from faststream.redis.message import UnifyRedisDict
 from faststream.redis.publisher.producer import RedisFastProducer
 from faststream.redis.response import RedisPublishCommand
@@ -41,6 +40,7 @@ if TYPE_CHECKING:
 
     from fast_depends.dependencies import Dependant
     from fast_depends.library.serializer import SerializerProto
+    from redis.asyncio.client import Redis
     from redis.asyncio.connection import BaseParser
     from typing_extensions import TypedDict
 
@@ -201,37 +201,64 @@ class RedisBroker(
             url_kwargs = urlparse(specification_url)
             protocol = url_kwargs.scheme
 
+        connection_options = _resolve_url_options(
+            url,
+            security=security,
+            host=host,
+            port=port,
+            db=db,
+            client_name=client_name,
+            health_check_interval=health_check_interval,
+            max_connections=max_connections,
+            socket_timeout=socket_timeout,
+            socket_connect_timeout=socket_connect_timeout,
+            socket_read_size=socket_read_size,
+            socket_keepalive=socket_keepalive,
+            socket_keepalive_options=socket_keepalive_options,
+            socket_type=socket_type,
+            retry_on_timeout=retry_on_timeout,
+            encoding=encoding,
+            encoding_errors=encoding_errors,
+            decode_responses=decode_responses,
+            parser_class=parser_class,
+            connection_class=connection_class,
+            encoder_class=encoder_class,
+        )
+
+        connection_state = ConnectionState(connection_options)
+
         super().__init__(
-            **_resolve_url_options(
-                url,
-                security=security,
-                host=host,
-                port=port,
-                db=db,
-                client_name=client_name,
-                health_check_interval=health_check_interval,
-                max_connections=max_connections,
-                socket_timeout=socket_timeout,
-                socket_connect_timeout=socket_connect_timeout,
-                socket_read_size=socket_read_size,
-                socket_keepalive=socket_keepalive,
-                socket_keepalive_options=socket_keepalive_options,
-                socket_type=socket_type,
-                retry_on_timeout=retry_on_timeout,
-                encoding=encoding,
-                encoding_errors=encoding_errors,
-                decode_responses=decode_responses,
-                parser_class=parser_class,
-                connection_class=connection_class,
-                encoder_class=encoder_class,
-            ),
+            **connection_options,
             # Basic args
             # broker base
-            graceful_timeout=graceful_timeout,
-            dependencies=dependencies,
-            decoder=decoder,
-            parser=parser,
-            middlewares=middlewares,
+            config=RedisBrokerConfig(
+                connection=connection_state,
+                producer=RedisFastProducer(
+                    connection=connection_state,
+                    parser=parser,
+                    decoder=decoder,
+                ),
+                # both args
+                broker_middlewares=middlewares,
+                broker_parser=parser,
+                broker_decoder=decoder,
+                logger=make_redis_logger_state(
+                    logger=logger,
+                    log_level=log_level,
+                ),
+                fd_config=FastDependsConfig(
+                    use_fastdepends=apply_types,
+                    serializer=serializer,
+                    get_dependent=_get_dependant,
+                    call_decorators=_call_decorators,
+                ),
+                # subscriber args
+                broker_dependencies=dependencies,
+                graceful_timeout=graceful_timeout,
+                extra_context={
+                    "broker": self,
+                },
+            ),
             routers=routers,
             # AsyncAPI
             description=description,
@@ -240,36 +267,12 @@ class RedisBroker(
             protocol_version=protocol_version,
             security=security,
             tags=tags,
-            # logging
-            logger_state=make_redis_logger_state(
-                logger=logger,
-                log_level=log_level,
-            ),
-            # FastDepends args
-            apply_types=apply_types,
-            serializer=serializer,
-            _get_dependant=_get_dependant,
-            _call_decorators=_call_decorators,
-        )
-
-        self._state.patch_value(
-            producer=RedisFastProducer(
-                parser=self._parser,
-                decoder=self._decoder,
-            )
         )
 
     @override
     async def _connect(self) -> "Redis[bytes]":
-        pool = ConnectionPool(
-            **self._connection_kwargs,
-            lib_name="faststream",
-            lib_version=__version__,
-        )
-
-        client: Redis[bytes] = Redis.from_pool(pool)  # type: ignore[attr-defined]
-        self._producer.connect(client)
-        return client
+        await self.config.connect()
+        return self.config.connection.client
 
     async def close(
         self,
@@ -278,24 +281,13 @@ class RedisBroker(
         exc_tb: Optional["TracebackType"] = None,
     ) -> None:
         await super().close(exc_type, exc_val, exc_tb)
-
-        self._producer.disconnect()
-
-        if self._connection is not None:
-            await self._connection.aclose()  # type: ignore[attr-defined]
-            self._connection = None
+        await self.config.disconnect()
+        self._connection = None
 
     async def start(self) -> None:
         await self.connect()
         self._setup()
         await super().start()
-
-    @property
-    def _subscriber_setup_extra(self) -> "AnyDict":
-        return {
-            **super()._subscriber_setup_extra,
-            "connection": self._connection,
-        }
 
     @overload
     async def publish(
@@ -375,7 +367,7 @@ class RedisBroker(
             headers=headers,
             _publish_type=PublishType.PUBLISH,
         )
-        return await super()._basic_publish(cmd, producer=self._producer)
+        return await super()._basic_publish(cmd, producer=self.config.producer)
 
     @override
     async def request(  # type: ignore[override]
@@ -401,7 +393,9 @@ class RedisBroker(
             timeout=timeout,
             _publish_type=PublishType.REQUEST,
         )
-        msg: RedisMessage = await super()._basic_request(cmd, producer=self._producer)
+        msg: RedisMessage = await super()._basic_request(
+            cmd, producer=self.config.producer
+        )
         return msg
 
     async def publish_batch(
@@ -440,7 +434,7 @@ class RedisBroker(
             _publish_type=PublishType.PUBLISH,
         )
 
-        return await self._basic_publish_batch(cmd, producer=self._producer)
+        return await self._basic_publish_batch(cmd, producer=self.config.producer)
 
     @override
     async def ping(self, timeout: Optional[float]) -> bool:

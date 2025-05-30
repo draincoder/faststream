@@ -77,8 +77,6 @@ class RabbitBroker(
     _producer: "AioPikaFastProducer"
     _channel: Optional["RobustChannel"]
 
-    config: "RabbitBrokerConfig"
-
     def __init__(
         self,
         url: Union[

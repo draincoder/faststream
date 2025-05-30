@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         PublisherMiddleware,
         SubscriberMiddleware,
     )
+    from faststream.nats.configs import NatsBrokerConfig
     from faststream.nats.message import NatsMessage
     from faststream.nats.publisher.specified import SpecificationPublisher
 
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
 class NatsRegistrator(ABCBroker["Msg"]):
     """Includable to NatsBroker router."""
 
+    config: "NatsBrokerConfig"
     _subscribers: list["SpecificationSubscriber"]
     _publishers: list["SpecificationPublisher"]
 

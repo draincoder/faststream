@@ -43,8 +43,7 @@ class RedisParamsStorage(DefaultLoggerStorage):
                     "channel": "",
                 },
                 message_id_ln=message_id_ln,
-                fmt=self._log_fmt
-                or (
+                fmt=(
                     "%(asctime)s %(levelname)-8s - "
                     f"%(channel)-{self._max_channel_name}s | "
                     f"%(message_id)-{message_id_ln}s "

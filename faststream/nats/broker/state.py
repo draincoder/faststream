@@ -34,8 +34,7 @@ class BrokerState:
     def __bool__(self) -> bool:
         return self._connected
 
-    def connect(self, connection: "Client",
-        stream: "JetStreamContext") -> None:
+    def connect(self, connection: "Client", stream: "JetStreamContext") -> None:
         self._connection = connection
         self._stream = stream
         self._connected = True
