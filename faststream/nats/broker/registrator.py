@@ -378,7 +378,7 @@ class NatsRegistrator(ABCBroker["Msg"]):
 
         sub_streams = router._stream_builder.objects.copy()
 
-        sub_router_subjects = [sub.subject for sub in router._subscribers]
+        sub_router_subjects = [sub.subject for sub in router.subscribers]
 
         for stream in sub_streams.values():
             new_subjects = []

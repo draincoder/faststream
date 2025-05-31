@@ -158,7 +158,7 @@ class TestBroker(Generic[Broker]):
             yield
 
     def _fake_start(self, broker: Broker, *args: Any, **kwargs: Any) -> None:
-        for publisher in broker._publishers:
+        for publisher in broker.publishers:
             if getattr(publisher, "_fake_handler", None):
                 continue
 
@@ -189,7 +189,7 @@ class TestBroker(Generic[Broker]):
 
         patch_broker_calls(broker)
 
-        for subscriber in broker._subscribers:
+        for subscriber in broker.subscribers:
             subscriber._post_start()
 
     def _fake_close(
@@ -199,7 +199,7 @@ class TestBroker(Generic[Broker]):
         exc_val: Optional[BaseException] = None,
         exc_tb: Optional["TracebackType"] = None,
     ) -> None:
-        for p in broker._publishers:
+        for p in broker.publishers:
             if getattr(p, "_fake_handler", None):
                 p.reset_test()  # type: ignore[attr-defined]
 
@@ -208,9 +208,9 @@ class TestBroker(Generic[Broker]):
         ]
         self._fake_subscribers.clear()
 
-        for h in broker._subscribers:
-            h.running = False
-            for call in h.calls:
+        for sub in broker.subscribers:
+            sub.running = False
+            for call in sub.calls:
                 call.handler.reset_test()
 
     @staticmethod
@@ -229,7 +229,7 @@ class TestBroker(Generic[Broker]):
 
 def patch_broker_calls(broker: "BrokerUsecase[Any, Any]") -> None:
     """Patch broker calls."""
-    for sub in broker._subscribers:
+    for sub in broker.subscribers:
         sub._build_fastdepends_model()
 
         for h in sub.calls:

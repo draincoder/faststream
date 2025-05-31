@@ -62,7 +62,7 @@ class TestKafkaBroker(TestBroker[KafkaBroker]):
         publisher: "SpecificationPublisher[Any, Any]",
     ) -> tuple["LogicSubscriber[Any]", bool]:
         sub: Optional[LogicSubscriber[Any]] = None
-        for handler in broker._subscribers:
+        for handler in broker.subscribers:
             if _is_handler_matches(handler, publisher.topic, publisher.partition):
                 sub = handler
                 break
@@ -132,7 +132,7 @@ class FakeProducer(AioKafkaFastProducer):
         )
 
         for handler in _find_handler(
-            self.broker._subscribers,
+            self.broker.subscribers,
             cmd.destination,
             cmd.partition,
         ):
@@ -158,7 +158,7 @@ class FakeProducer(AioKafkaFastProducer):
         )
 
         for handler in _find_handler(
-            self.broker._subscribers,
+            self.broker.subscribers,
             cmd.destination,
             cmd.partition,
         ):
@@ -179,7 +179,7 @@ class FakeProducer(AioKafkaFastProducer):
     ) -> None:
         """Publish a batch of messages to the Kafka broker."""
         for handler in _find_handler(
-            self.broker._subscribers,
+            self.broker.subscribers,
             cmd.destination,
             cmd.partition,
         ):

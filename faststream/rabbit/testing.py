@@ -62,13 +62,6 @@ class TestRabbitBroker(TestBroker[RabbitBroker]):
 
         with ExitStack() as es:
             es.enter_context(change_producer(broker.config.broker_config, fake_producer))
-
-            # for s in broker._subscribers:
-            #     es.enter_context(change_producer(s._outer_config, fake_producer))
-
-            # for p in broker._publishers:
-            #     es.enter_context(change_producer(p._outer_config, fake_producer))
-
             yield
 
     @staticmethod
@@ -81,7 +74,7 @@ class TestRabbitBroker(TestBroker[RabbitBroker]):
         publisher: "SpecificationPublisher",
     ) -> tuple["LogicSubscriber", bool]:
         sub: Optional[LogicSubscriber] = None
-        for handler in broker._subscribers:
+        for handler in broker.subscribers:
             if _is_handler_matches(
                 handler,
                 publisher.routing(),
@@ -225,7 +218,7 @@ class FakeProducer(AioPikaFastProducer):
         )
 
         called = False
-        for handler in self.broker._subscribers:  # pragma: no branch
+        for handler in self.broker.subscribers:  # pragma: no branch
             if _is_handler_matches(
                 handler,
                 incoming.routing_key,
@@ -253,7 +246,7 @@ class FakeProducer(AioPikaFastProducer):
             **cmd.message_options,
         )
 
-        for handler in self.broker._subscribers:  # pragma: no branch
+        for handler in self.broker.subscribers:  # pragma: no branch
             if _is_handler_matches(
                 handler,
                 incoming.routing_key,

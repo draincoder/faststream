@@ -24,6 +24,36 @@ class RouterTestcase(
     def get_router(self, **kwargs: Any) -> BrokerRouter:
         raise NotImplementedError
 
+    async def test_router_dynamic_objects(
+        self,
+        queue: str,
+        event: asyncio.Event,
+    ) -> None:
+        nested_router = self.get_router()
+        router = self.get_router(routers=[nested_router])
+        broker = self.get_broker(routers=[router])
+
+        def subscriber(m) -> None:
+            event.set()
+
+        async with self.patch_broker(broker) as br:
+            await br.start()
+
+            args, kwargs = self.get_subscriber_params(queue)
+            sub = nested_router.subscriber(*args, **kwargs)
+            sub(subscriber)
+            await sub.start()
+
+            await asyncio.wait(
+                (
+                    asyncio.create_task(br.publish("Hi!", queue)),
+                    asyncio.create_task(event.wait()),
+                ),
+                timeout=self.timeout,
+            )
+
+            assert event.is_set()
+
     async def test_empty_prefix(self, queue: str) -> None:
         event = asyncio.Event()
 
@@ -494,16 +524,14 @@ class RouterTestcase(
 
         pub_broker.include_routers(router2, router1)
 
-        pub1 = router1._publishers[0]
-        pub2 = router2._publishers[0]
+        pub1 = router1.publishers[0]
+        pub2 = router2.publishers[0]
         assert pub1._producer is pub2._producer
 
 
 @pytest.mark.asyncio()
 class RouterLocalTestcase(RouterTestcase):
-    async def test_publisher_mock(self, queue: str) -> None:
-        event = asyncio.Event()
-
+    async def test_publisher_mock(self, queue: str, event: asyncio.Event) -> None:
         pub_broker = self.get_broker()
         router = self.get_router()
 

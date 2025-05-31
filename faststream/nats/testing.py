@@ -53,7 +53,7 @@ class TestNatsBroker(TestBroker[NatsBroker]):
     ) -> tuple["LogicSubscriber[Any, Any]", bool]:
         sub: Optional[LogicSubscriber[Any, Any]] = None
         publisher_stream = publisher.stream.name if publisher.stream else None
-        for handler in broker._subscribers:
+        for handler in broker.subscribers:
             if _is_handler_matches(handler, publisher.subject, publisher_stream):
                 sub = handler
                 break
@@ -111,7 +111,7 @@ class FakeProducer(NatsFastProducer):
         )
 
         for handler in _find_handler(
-            self.broker._subscribers,
+            self.broker.subscribers,
             cmd.destination,
             cmd.stream,
         ):
@@ -137,7 +137,7 @@ class FakeProducer(NatsFastProducer):
         )
 
         for handler in _find_handler(
-            self.broker._subscribers,
+            self.broker.subscribers,
             cmd.destination,
             cmd.stream,
         ):

@@ -496,7 +496,7 @@ class StreamRouter(
     ) -> None:
         """Includes a router in the API."""
         if isinstance(router, BrokerRouter):
-            for sub in router._subscribers:
+            for sub in router.subscribers:
                 sub._call_decorators = (  # type: ignore[attr-defined]
                     self._add_api_mq_route(
                         dependencies=(),

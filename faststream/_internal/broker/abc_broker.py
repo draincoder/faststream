@@ -44,9 +44,6 @@ class ABCBroker(Generic[MsgType]):
     Contains subscribers & publishers registration logic only.
     """
 
-    _subscribers: list[FinalSubscriber[MsgType]]
-    _publishers: list[FinalPublisher[MsgType]]
-
     def __init__(
         self,
         *,
@@ -57,10 +54,19 @@ class ABCBroker(Generic[MsgType]):
         self._parser = self.config.broker_parser
         self._decoder = self.config.broker_decoder
 
-        self._subscribers = []
-        self._publishers = []
+        self._subscribers: list[FinalSubscriber[MsgType]] = []
+        self._publishers: list[FinalPublisher[MsgType]] = []
+        self.routers: list[ABCBroker] = []
 
         self.include_routers(*routers)
+
+    @property
+    def subscribers(self) -> list[FinalSubscriber[MsgType]]:
+        return self._subscribers + [sub for r in self.routers for sub in r.subscribers]
+
+    @property
+    def publishers(self) -> list[FinalPublisher[MsgType]]:
+        return self._publishers + [pub for r in self.routers for pub in r.publishers]
 
     def add_middleware(self, middleware: "BrokerMiddleware[MsgType]") -> None:
         """Append BrokerMiddleware to the end of middlewares list.
@@ -104,12 +110,7 @@ class ABCBroker(Generic[MsgType]):
             router.config.add_config(options_config)
 
         router.config.add_config(self.config)
-
-        for sub in router._subscribers:
-            self._subscribers.append(sub)
-
-        for pub in router._publishers:
-            self._publishers.append(pub)
+        self.routers.append(router)
 
     def include_routers(
         self,

@@ -3,8 +3,8 @@ from collections.abc import AsyncIterator, Awaitable
 from concurrent.futures import Executor
 from contextlib import asynccontextmanager
 from functools import partial, wraps
-from types import TracebackType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Optional,
@@ -24,6 +24,9 @@ from fast_depends.utils import (
 from typing_extensions import ParamSpec
 
 from faststream._internal.basic_types import F_Return, F_Spec
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 __all__ = (
     "call_or_await",

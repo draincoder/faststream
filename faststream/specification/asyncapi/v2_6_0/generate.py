@@ -147,7 +147,7 @@ def get_broker_channels(
     """Get the broker channels for an application."""
     channels = {}
 
-    for h in broker._subscribers:
+    for h in broker.subscribers:
         for key, sub in h.schema().items():
             if key in channels:
                 warnings.warn(
@@ -158,7 +158,7 @@ def get_broker_channels(
 
             channels[key] = Channel.from_sub(sub)
 
-    for p in broker._publishers:
+    for p in broker.publishers:
         for key, pub in p.schema().items():
             if key in channels:
                 warnings.warn(

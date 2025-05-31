@@ -132,23 +132,25 @@ class BrokerUsecase(
         await self.close(exc_type, exc_val, exc_tb)
 
     def _update_fd_config(self, config: "FastDependsConfig") -> None:
-        self.config.broker_config.fd_config = config | self.config.broker_config.fd_config
+        """Private method to change broker config state by outer application."""
+        self.config.broker_config.fd_config = (
+            config | self.config.broker_config.fd_config
+        )
 
     async def start(self) -> None:
-        # We should setup logger before starting subscribers
         self._setup_logger()
 
         # TODO: filter by already running handlers after TestClient refactor
-        for sub in self._subscribers:
+        for sub in self.subscribers:
             await sub.start()
 
-        for pub in self._publishers:
+        for pub in self.publishers:
             await pub.start()
 
         self.running = True
 
     def _setup_logger(self) -> None:
-        for sub in self._subscribers:
+        for sub in self.subscribers:
             log_context = sub.get_log_context(None)
             log_context.pop("message_id", None)
             self.config.logger.params_storage.register_subscriber(log_context)
@@ -173,8 +175,8 @@ class BrokerUsecase(
         exc_tb: Optional["TracebackType"] = None,
     ) -> None:
         """Closes the object."""
-        for h in self._subscribers:
-            await h.close()
+        for sub in self.subscribers:
+            await sub.close()
 
         self.running = False
 
