@@ -81,6 +81,8 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
 
     async def start(self) -> None:
         """Start the consumer."""
+        await super().start()
+
         self.consumer = consumer = self.builder(
             group_id=self.group_id,
             client_id=self.client_id,

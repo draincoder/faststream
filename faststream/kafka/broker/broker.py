@@ -516,7 +516,6 @@ class KafkaBroker(
     async def start(self) -> None:
         """Connect broker to Kafka and startup all subscribers."""
         await self.connect()
-        self._setup()
         await super().start()
 
     @overload
