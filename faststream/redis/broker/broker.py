@@ -274,7 +274,6 @@ class RedisBroker(
 
     async def start(self) -> None:
         await self.connect()
-        self._setup()
         await super().start()
 
     @overload

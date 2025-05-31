@@ -51,14 +51,7 @@ class TestRedisBroker(TestBroker[RedisBroker]):
         fake_producer = FakeProducer(broker)
 
         with ExitStack() as es:
-            es.enter_context(change_producer(broker.config, fake_producer))
-
-            for s in broker._subscribers:
-                es.enter_context(change_producer(s._outer_config, fake_producer))
-
-            for p in broker._publishers:
-                es.enter_context(change_producer(p._outer_config, fake_producer))
-
+            es.enter_context(change_producer(broker.config.broker_config, fake_producer))
             yield
 
     @staticmethod

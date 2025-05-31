@@ -57,6 +57,8 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[UnifyRedisDict]):
         if self.tasks:
             return
 
+        await super().start()
+
         self._post_start()
 
         start_signal = anyio.Event()
