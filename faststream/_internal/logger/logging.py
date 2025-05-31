@@ -71,7 +71,7 @@ def set_logger_fmt(
     fmt: str,
 ) -> None:
     if _handler_exists(logger):
-        return None
+        return
 
     handler = logging.StreamHandler(stream=stream)
     handler.setFormatter(
@@ -81,7 +81,6 @@ def set_logger_fmt(
         ),
     )
     logger.addHandler(handler)
-    return logger
 
 
 def _handler_exists(logger: logging.Logger) -> bool:

@@ -149,7 +149,7 @@ class HandlerCallWrapper(Generic[MsgType, P_HandlerParams, T_HandlerReturn]):
         config: "FastDependsConfig",
     ) -> Optional["CallModel"]:
         call = self._original_call
-        for decor in reversed((*_call_decorators, *config.call_decorators)):
+        for decor in (*_call_decorators, *config.call_decorators):
             call = decor(call)
         self._original_call = call
 

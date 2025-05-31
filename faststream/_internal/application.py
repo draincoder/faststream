@@ -89,17 +89,15 @@ class StartAbleApplication:
         config: Optional["FastDependsConfig"] = None,
     ) -> None:
         self.config = config or FastDependsConfig()
+
         self.brokers = [broker] if broker else []
 
-        self._setup()
-
-    def _setup(self) -> None:
-        for broker in self.brokers:
-            broker._setup(self.config)
+        for b in self.brokers:
+            b._update_fd_config(self.config)
 
     async def _start_broker(self) -> None:
-        assert self.broker, "You should setup a broker"
-        await self.broker.start()
+        for b in self.brokers:
+            await b.start()
 
     @property
     def broker(self) -> Optional["BrokerUsecase[Any, Any]"]:
@@ -115,7 +113,6 @@ class StartAbleApplication:
             raise SetupError(msg)
 
         self.brokers.append(broker)
-        self._setup()
 
 
 class Application(StartAbleApplication):
@@ -131,10 +128,7 @@ class Application(StartAbleApplication):
         on_shutdown: Sequence["AnyCallable"] = (),
         after_shutdown: Sequence["AnyCallable"] = (),
     ) -> None:
-        super().__init__(
-            broker,
-            config=config,
-        )
+        super().__init__(broker, config=config)
 
         self.context.set_global("app", self)
 

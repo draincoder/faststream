@@ -44,8 +44,6 @@ def create_subscriber(
         channel=channel,
         _ack_policy=ack_policy,
         _no_ack=no_ack,
-        # broker
-        config=config,
         # rmq
         queue=queue,
         exchange=exchange,
@@ -53,6 +51,8 @@ def create_subscriber(
         title_=title_,
         description_=description_,
         include_in_schema=include_in_schema,
+        # broker
+        config=config,
     )
 
     return SpecificationSubscriber(config)

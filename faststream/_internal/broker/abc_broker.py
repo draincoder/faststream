@@ -15,7 +15,7 @@ from faststream._internal.endpoint.subscriber import (
 from faststream._internal.types import BrokerMiddleware, MsgType
 from faststream.specification.schema import PublisherSpec, SubscriberSpec
 
-from .config import BrokerConfig
+from .config import BrokerConfig, ConfigComposition
 
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
@@ -53,9 +53,9 @@ class ABCBroker(Generic[MsgType]):
         config: "BrokerConfig",
         routers: Sequence["ABCBroker[MsgType]"],
     ) -> None:
-        self.config = config
-        self._parser = config.broker_parser
-        self._decoder = config.broker_decoder
+        self.config = ConfigComposition(config)
+        self._parser = self.config.broker_parser
+        self._decoder = self.config.broker_decoder
 
         self._subscribers = []
         self._publishers = []
@@ -95,19 +95,20 @@ class ABCBroker(Generic[MsgType]):
         include_in_schema: Optional[bool] = None,
     ) -> None:
         """Includes a router in the current object."""
-        new_config = self.config | BrokerConfig(
+        if options_config := BrokerConfig(
             prefix=prefix,
             include_in_schema=include_in_schema,
             broker_middlewares=middlewares,
             broker_dependencies=dependencies,
-        )
+        ):
+            router.config.add_config(options_config)
+
+        router.config.add_config(self.config)
 
         for sub in router._subscribers:
-            sub.register(new_config)
             self._subscribers.append(sub)
 
         for pub in router._publishers:
-            pub.register(new_config)
             self._publishers.append(pub)
 
     def include_routers(

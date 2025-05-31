@@ -25,7 +25,7 @@ from faststream._internal.types import (
     P_HandlerParams,
     T_HandlerReturn,
 )
-from faststream._internal.utils.functions import sync_fake_context, to_async
+from faststream._internal.utils.functions import FakeContext, to_async
 from faststream.exceptions import SetupError, StopConsume, SubscriberNotFound
 from faststream.middlewares import AckPolicy, AcknowledgementMiddleware
 from faststream.middlewares.logging import CriticalLogMiddleware
@@ -36,9 +36,7 @@ from .proto import SubscriberProto
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
 
-    from faststream._internal.basic_types import AnyDict, Decorator
-    from faststream._internal.broker import BrokerConfig
-    from faststream._internal.di import FastDependsConfig
+    from faststream._internal.basic_types import AnyDict
     from faststream._internal.endpoint.call_wrapper import HandlerCallWrapper
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.types import (
@@ -70,7 +68,6 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
     graceful_timeout: Optional[float]
 
     _call_options: Optional["_CallOptions"]
-    _call_decorators: Iterable["Decorator"]
 
     def __init__(self, config: "SubscriberUsecaseConfig", /) -> None:
         """Initialize a new instance of the class."""
@@ -85,7 +82,7 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         self._call_decorators = ()
 
         self.running = False
-        self.lock = sync_fake_context()
+        self.lock = FakeContext()
 
         # Setup in registration
         self._outer_config = config.config
@@ -93,22 +90,25 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
         self.extra_watcher_options = {}
 
     @property
+    def include_in_schema(self) -> bool:
+        return self._outer_config.include_in_schema
+
+    @property
     def _broker_middlewares(self) -> Sequence["BrokerMiddleware[MsgType]"]:
         return self._outer_config.broker_middlewares
 
-    def register(self, config: "BrokerConfig", /) -> None:
-        self._outer_config = final_config = config | self._outer_config
-        self.include_in_schema = final_config.include_in_schema
-
-    def _post_start(self) -> None:
+    async def start(self) -> None:
+        """Private method to start subscriber by broker."""
         self.lock = MultiLock()
-        self.running = True
 
-    @override
-    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None:
-        if config:
-            self._outer_config.fd_config = config | self._outer_config.fd_config
+        self._build_fastdepends_model()
 
+        self._outer_config.logger.log(
+            f"`{self.call_name}` waiting for messages",
+            extra=self.get_log_context(None),
+        )
+
+    def _build_fastdepends_model(self) -> None:
         for call in self.calls:
             if parser := call.item_parser or self._outer_config.broker_parser:
                 async_parser = resolve_custom_func(parser, self._parser)
@@ -129,6 +129,9 @@ class SubscriberUsecase(SubscriberProto[MsgType]):
             )
 
             call.handler.refresh(with_mock=False)
+
+    def _post_start(self) -> None:
+        self.running = True
 
     @abstractmethod
     async def close(self) -> None:

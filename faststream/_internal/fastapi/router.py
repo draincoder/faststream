@@ -135,15 +135,43 @@ class StreamRouter(
                 # allow to catch background exceptions in user middlewares
                 _BackgroundMiddleware,
             ),
-            _get_dependant=get_fastapi_dependant,
             tags=specification_tags,
             apply_types=False,
             **connection_kwars,
         )
 
+        broker.config.fd_config.get_dependent = get_fastapi_dependant
+        broker.config.fd_config.call_decorators = [
+            self._add_api_mq_route(
+                dependencies=dependencies or (),
+                response_model=Default(None),
+                response_model_include=None,
+                response_model_exclude=None,
+                response_model_by_alias=True,
+                response_model_exclude_unset=False,
+                response_model_exclude_defaults=False,
+                response_model_exclude_none=False,
+            )
+        ]
+
         self._init_setupable_(
             broker,
             config=None,
+            # config=FastDependsConfig(
+            #     get_dependent=get_fastapi_dependant,
+            #     call_decorators=[
+            #         self._add_api_mq_route(
+            #             dependencies=(),
+            #             response_model=Default(None),
+            #             response_model_include=None,
+            #             response_model_exclude=None,
+            #             response_model_by_alias=True,
+            #             response_model_exclude_unset=False,
+            #             response_model_exclude_defaults=False,
+            #             response_model_exclude_none=False,
+            #         )
+            #     ],
+            # ),
         )
 
         self.setup_state = setup_state
@@ -496,20 +524,6 @@ class StreamRouter(
     ) -> None:
         """Includes a router in the API."""
         if isinstance(router, BrokerRouter):
-            for sub in router._subscribers:
-                sub._call_decorators = (  # type: ignore[attr-defined]
-                    self._add_api_mq_route(
-                        dependencies=(),
-                        response_model=Default(None),
-                        response_model_include=None,
-                        response_model_exclude=None,
-                        response_model_by_alias=True,
-                        response_model_exclude_unset=False,
-                        response_model_exclude_defaults=False,
-                        response_model_exclude_none=False,
-                    ),
-                )
-
             self.broker.include_router(router)
             return
 

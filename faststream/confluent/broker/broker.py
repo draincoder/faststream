@@ -3,7 +3,6 @@ from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Annotated,
-    Any,
     Callable,
     Literal,
     Optional,
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     from fast_depends.library.serializer import SerializerProto
 
     from faststream._internal.basic_types import (
-        Decorator,
         LoggerProto,
         SendableMessage,
     )
@@ -320,14 +318,6 @@ class KafkaBroker(  # type: ignore[misc]
             Doc("Whether to use FastDepends or not."),
         ] = True,
         serializer: Optional["SerializerProto"] = EMPTY,
-        _get_dependant: Annotated[
-            Optional[Callable[..., Any]],
-            Doc("Custom library dependant generator callback."),
-        ] = None,
-        _call_decorators: Annotated[
-            Iterable["Decorator"],
-            Doc("Any custom decorator to apply to wrapped functions."),
-        ] = (),
     ) -> None:
         if protocol is None:
             if security is not None and security.use_ssl:
@@ -390,8 +380,6 @@ class KafkaBroker(  # type: ignore[misc]
                 fd_config=FastDependsConfig(
                     use_fastdepends=apply_types,
                     serializer=serializer,
-                    get_dependent=_get_dependant,
-                    call_decorators=_call_decorators,
                 ),
                 # subscriber args
                 graceful_timeout=graceful_timeout,

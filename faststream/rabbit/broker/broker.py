@@ -2,8 +2,6 @@ import logging
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
-    Any,
-    Callable,
     Optional,
     Union,
     cast,
@@ -54,7 +52,7 @@ if TYPE_CHECKING:
     from fast_depends.library.serializer import SerializerProto
     from yarl import URL
 
-    from faststream._internal.basic_types import Decorator, LoggerProto
+    from faststream._internal.basic_types import LoggerProto
     from faststream._internal.types import (
         BrokerMiddleware,
         CustomCallable,
@@ -113,8 +111,6 @@ class RabbitBroker(
         # FastDepends args
         apply_types: bool = True,
         serializer: Optional["SerializerProto"] = EMPTY,
-        _get_dependant: Optional[Callable[..., Any]] = None,
-        _call_decorators: Iterable["Decorator"] = (),
     ) -> None:
         """Initialize the RabbitBroker.
 
@@ -206,8 +202,6 @@ class RabbitBroker(
                 fd_config=FastDependsConfig(
                     use_fastdepends=apply_types,
                     serializer=serializer,
-                    get_dependent=_get_dependant,
-                    call_decorators=_call_decorators,
                 ),
                 # subscriber args
                 broker_dependencies=dependencies,
@@ -263,14 +257,7 @@ class RabbitBroker(
     async def start(self) -> None:
         """Connect broker to RabbitMQ and startup all subscribers."""
         await self.connect()
-        self._setup()
-
         await self.declare_queue(RABBIT_REPLY)
-
-        for publisher in self._publishers:
-            if publisher.exchange is not None:
-                await self.declare_exchange(publisher.exchange)
-
         await super().start()
 
     @override

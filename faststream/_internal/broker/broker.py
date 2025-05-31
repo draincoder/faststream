@@ -27,8 +27,6 @@ if TYPE_CHECKING:
 
     from faststream._internal.context.repository import ContextRepo
     from faststream._internal.di import FastDependsConfig
-    from faststream._internal.endpoint.publisher import PublisherProto
-    from faststream._internal.endpoint.subscriber import SubscriberProto
     from faststream._internal.producer import ProducerProto
     from faststream.security import BaseSecurity
     from faststream.specification.schema.extra import Tag, TagDict
@@ -133,28 +131,29 @@ class BrokerUsecase(
     ) -> None:
         await self.close(exc_type, exc_val, exc_tb)
 
-    @abstractmethod
+    def _update_fd_config(self, config: "FastDependsConfig") -> None:
+        self.config.broker_config.fd_config = config | self.config.broker_config.fd_config
+
     async def start(self) -> None:
-        """Start the broker async use case."""
+        # We should setup logger before starting subscribers
+        self._setup_logger()
+
         # TODO: filter by already running handlers after TestClient refactor
         for sub in self._subscribers:
-            self.config.logger.log(
-                f"`{sub.call_name}` waiting for messages",
-                extra=sub.get_log_context(None),
-            )
             await sub.start()
 
-        if not self.running:
-            self.running = True
+        for pub in self._publishers:
+            await pub.start()
 
-    def _setup_logger_state(self) -> None:
-        for subscriber in self._subscribers:
-            log_context = subscriber.get_log_context(None)
+        self.running = True
+
+    def _setup_logger(self) -> None:
+        for sub in self._subscribers:
+            log_context = sub.get_log_context(None)
             log_context.pop("message_id", None)
-
             self.config.logger.params_storage.register_subscriber(log_context)
 
-        self.config.logger._setup(context=self.context)
+        self.config.logger._setup(context=self.config.fd_config.context)
 
     async def connect(self) -> ConnectionType:
         """Connect to a remote server."""
@@ -166,33 +165,6 @@ class BrokerUsecase(
     async def _connect(self) -> ConnectionType:
         """Connect to a resource."""
         raise NotImplementedError
-
-    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None:
-        """Prepare all Broker entities to startup.
-
-        Method should be idempotent due could be called twice.
-        """
-        if config:
-            self.config.fd_config = config | self.config.fd_config
-
-        self._setup_logger_state()
-
-        for h in self._subscribers:
-            self.setup_subscriber(h)
-
-        for p in self._publishers:
-            self.setup_publisher(p)
-
-    def setup_subscriber(
-        self,
-        subscriber: "SubscriberProto[MsgType]",
-    ) -> None:
-        """Setup the Subscriber to prepare it to starting."""
-        subscriber._setup(self.config.fd_config)
-
-    def setup_publisher(self, publisher: "PublisherProto[MsgType]") -> None:
-        """Setup the Publisher to prepare it to starting."""
-        publisher._setup(self.config.fd_config)
 
     async def close(
         self,

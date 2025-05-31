@@ -8,11 +8,10 @@ from typing import (
 from faststream._internal.types import MsgType
 
 from .abc_broker import ABCBroker
+from .config import BrokerConfig
 
 if TYPE_CHECKING:
     from faststream._internal.basic_types import AnyDict
-
-    from .config import BrokerConfig
 
 
 class ArgsContainer:

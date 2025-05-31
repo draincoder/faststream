@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
-from faststream._internal.broker import BrokerConfig
+from faststream._internal.broker.config import BrokerConfig
 from faststream.rabbit.helpers.channel_manager import FakeChannelManager
 from faststream.rabbit.helpers.declarer import FakeRabbitDeclarer
 from faststream.rabbit.publisher.producer import FakeAioPikaFastProducer
@@ -22,14 +22,8 @@ class RabbitBrokerConfig(BrokerConfig):
     virtual_host: str = ""
     app_id: Optional[str] = None
 
-    def __or__(self, value: "BrokerConfig", /) -> "RabbitBrokerConfig":
-        return RabbitBrokerConfig(
-            channel_manager=self.channel_manager,
-            declarer=self.declarer,
-            virtual_host=self.virtual_host,
-            app_id=self.app_id,
-            **self._merge_configs(value),
-        )
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(id: {id(self)})"
 
     def connect(self, connection: "RobustConnection") -> None:
         self.channel_manager.connect(connection)

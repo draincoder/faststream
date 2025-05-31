@@ -57,6 +57,8 @@ class LogicSubscriber(SubscriberUsecase["IncomingMessage"]):
     @override
     async def start(self) -> None:
         """Starts the consumer for the RabbitMQ queue."""
+        await super().start()
+
         queue_to_bind = self.queue.add_prefix(self._outer_config.prefix)
 
         declarer = self._outer_config.declarer

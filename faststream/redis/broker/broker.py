@@ -4,7 +4,6 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
-    Callable,
     Optional,
     Union,
 )
@@ -46,7 +45,6 @@ if TYPE_CHECKING:
 
     from faststream._internal.basic_types import (
         AnyDict,
-        Decorator,
         LoggerProto,
         SendableMessage,
     )
@@ -185,14 +183,6 @@ class RedisBroker(
             Doc("Whether to use FastDepends or not."),
         ] = True,
         serializer: Optional["SerializerProto"] = EMPTY,
-        _get_dependant: Annotated[
-            Optional[Callable[..., Any]],
-            Doc("Custom library dependant generator callback."),
-        ] = None,
-        _call_decorators: Annotated[
-            Iterable["Decorator"],
-            Doc("Any custom decorator to apply to wrapped functions."),
-        ] = (),
     ) -> None:
         if specification_url is None:
             specification_url = url
@@ -249,8 +239,6 @@ class RedisBroker(
                 fd_config=FastDependsConfig(
                     use_fastdepends=apply_types,
                     serializer=serializer,
-                    get_dependent=_get_dependant,
-                    call_decorators=_call_decorators,
                 ),
                 # subscriber args
                 broker_dependencies=dependencies,

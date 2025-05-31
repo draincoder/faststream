@@ -10,14 +10,16 @@ from .usecase import RabbitPublisherConfig, RabbitSubscriberConfig
 
 @dataclass(kw_only=True)
 class RabbitSubscriberConfigFacade(
-    RabbitSubscriberSpecificationConfig, RabbitSubscriberConfig
+    RabbitSubscriberSpecificationConfig,
+    RabbitSubscriberConfig,
 ):
     pass
 
 
 @dataclass(kw_only=True)
 class RabbitPublisherConfigFacade(
-    RabbitPublisherSpecificationConfig, RabbitPublisherConfig
+    RabbitPublisherSpecificationConfig,
+    RabbitPublisherConfig,
 ):
     pass
 

@@ -14,8 +14,6 @@ if TYPE_CHECKING:
     from typing_extensions import ReadOnly
 
     from faststream._internal.basic_types import SendableMessage
-    from faststream._internal.broker import BrokerConfig
-    from faststream._internal.di import FastDependsConfig
     from faststream._internal.producer import ProducerProto
     from faststream._internal.types import BrokerMiddleware, PublisherMiddleware
     from faststream.response import PublishCommand
@@ -70,7 +68,4 @@ class PublisherProto(
     _producer: "ReadOnly[ProducerProto]"
 
     @abstractmethod
-    def register(self, config: "BrokerConfig", /) -> None: ...
-
-    @abstractmethod
-    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None: ...
+    async def start(self) -> None: ...

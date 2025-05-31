@@ -50,7 +50,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypedDict
 
     from faststream._internal.basic_types import (
-        Decorator,
         LoggerProto,
         SendableMessage,
     )
@@ -294,8 +293,6 @@ class KafkaBroker(
         # FastDepends args
         apply_types: bool = True,
         serializer: Optional["SerializerProto"] = EMPTY,
-        _get_dependant: Optional[Callable[..., Any]] = None,
-        _call_decorators: Iterable["Decorator"] = (),
     ) -> None:
         """Kafka broker constructor.
 
@@ -483,8 +480,6 @@ class KafkaBroker(
                 fd_config=FastDependsConfig(
                     use_fastdepends=apply_types,
                     serializer=serializer,
-                    get_dependent=_get_dependant,
-                    call_decorators=_call_decorators,
                 ),
                 # subscriber args
                 graceful_timeout=graceful_timeout,

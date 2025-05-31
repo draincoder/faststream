@@ -10,8 +10,6 @@ from faststream._internal.types import MsgType
 if TYPE_CHECKING:
     from fast_depends.dependencies import Dependant
 
-    from faststream._internal.broker import BrokerConfig
-    from faststream._internal.di import FastDependsConfig
     from faststream._internal.endpoint.publisher import BasePublisherProto
     from faststream._internal.endpoint.subscriber.call_item import HandlerItem
     from faststream._internal.producer import ProducerProto
@@ -32,9 +30,7 @@ class SubscriberProto(Endpoint[MsgType]):
 
     _broker_middlewares: ReadOnly[Sequence["BrokerMiddleware[MsgType]"]]
 
-    def register(self, config: "BrokerConfig", /) -> None: ...
-
-    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None: ...
+    async def start(self) -> None: ...
 
     @abstractmethod
     def get_log_context(
@@ -48,9 +44,6 @@ class SubscriberProto(Endpoint[MsgType]):
         self,
         message: "StreamMessage[MsgType]",
     ) -> Iterable["BasePublisherProto"]: ...
-
-    @abstractmethod
-    async def start(self) -> None: ...
 
     @abstractmethod
     async def close(self) -> None: ...

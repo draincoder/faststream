@@ -26,8 +26,6 @@ from faststream.message.source_type import SourceType
 from .proto import PublisherProto
 
 if TYPE_CHECKING:
-    from faststream._internal.broker import BrokerConfig
-    from faststream._internal.di import FastDependsConfig
     from faststream._internal.producer import ProducerProto
     from faststream._internal.types import (
         PublisherMiddleware,
@@ -49,18 +47,17 @@ class PublisherUsecase(PublisherProto[MsgType]):
         self._fake_handler = False
         self.mock: Optional[MagicMock] = None
 
-    def register(self, config: "BrokerConfig", /) -> None:
-        self._outer_config = final_config = config | self._outer_config
-        self.include_in_schema = final_config.include_in_schema
+    @property
+    def include_in_schema(self) -> bool:
+        return self._outer_config.include_in_schema
 
     @property
     def _producer(self) -> "ProducerProto":
         return self._outer_config.producer
 
     @override
-    def _setup(self, config: Optional["FastDependsConfig"] = None, /) -> None:
-        if config:
-            self._outer_config.fd_config = config | self._outer_config.fd_config
+    async def start(self) -> None:
+        pass
 
     def set_test(
         self,

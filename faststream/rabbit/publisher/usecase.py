@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from faststream._internal.types import PublisherMiddleware
     from faststream.rabbit.configs import RabbitBrokerConfig
     from faststream.rabbit.message import RabbitMessage
-    from faststream.rabbit.publisher.producer import AioPikaFastProducer
     from faststream.rabbit.types import AioPikaSendableMessage
     from faststream.response.response import PublishCommand
 
@@ -44,9 +43,7 @@ class PublishKwargs(MessageOptions, PublishOptions, total=False):
 class LogicPublisher(PublisherUsecase[IncomingMessage]):
     """A class to represent a RabbitMQ publisher."""
 
-    app_id: Optional[str]
-
-    _producer: Optional["AioPikaFastProducer"]
+    _outer_config: "RabbitBrokerConfig"
 
     def __init__(self, config: RabbitPublisherConfig, /) -> None:
         super().__init__(config)
@@ -61,18 +58,19 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
         self.timeout = config.message_kwargs.pop("timeout", None)
 
         message_options, _ = filter_by_dict(MessageOptions, dict(config.message_kwargs))
-        if config.config.app_id:
-            message_options["app_id"] = config.config.app_id
-        self.message_options = message_options
+        self._message_options = message_options
 
         publish_options, _ = filter_by_dict(PublishOptions, dict(config.message_kwargs))
         self.publish_options = publish_options
 
-    def register(self, config: "RabbitBrokerConfig", /) -> None:
-        if not self.message_options.get("app_id"):
-            self.message_options["app_id"] = config.app_id
+    @property
+    def message_options(self) -> "MessageOptions":
+        if self._outer_config.app_id and "app_id" not in self._message_options:
+            message_options = self._message_options.copy()
+            message_options["app_id"] = self._outer_config.app_id
+            return message_options
 
-        return super().register(config)
+        return self._message_options
 
     def routing(
         self,
@@ -89,6 +87,11 @@ class LogicPublisher(PublisherUsecase[IncomingMessage]):
             routing_key = f"{self._outer_config.prefix}{routing_key}"
 
         return routing_key
+
+    async def start(self) -> None:
+        if self.exchange is not None:
+            await self._outer_config.declarer.declare_exchange(self.exchange)
+        return await super().start()
 
     @override
     async def publish(
