@@ -96,6 +96,7 @@ class StartAbleApplication:
             b._update_fd_config(self.config)
 
     async def _start_broker(self) -> None:
+        assert self.brokers, "You should setup a broker"
         for b in self.brokers:
             await b.start()
 

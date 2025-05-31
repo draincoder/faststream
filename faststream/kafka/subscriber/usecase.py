@@ -365,7 +365,7 @@ class ConcurrentBetweenPartitionsSubscriber(DefaultSubscriber):
 
     async def start(self) -> None:
         """Start the consumer subgroup."""
-        assert self.builder, "You should setup subscriber at first."  # nosec B101
+        await super().start()
 
         if self.calls:
             self.consumer_subgroup = [

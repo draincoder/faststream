@@ -15,12 +15,6 @@ class RedisBrokerConfig(BrokerConfig):
     producer: "RedisFastProducer"
     connection: "ConnectionState"
 
-    def __or__(self, value: "BrokerConfig", /) -> "RedisBrokerConfig":
-        return RedisBrokerConfig(
-            connection=self.connection,
-            **self._merge_configs(value),
-        )
-
     async def connect(self) -> None:
         await self.connection.connect()
 

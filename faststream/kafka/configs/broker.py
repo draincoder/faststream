@@ -3,7 +3,7 @@ from functools import partial
 from typing import Any, Callable, Optional
 
 import aiokafka
-from aiokafka.admin.client import AIOKafkaAdminClient
+import aiokafka.admin
 
 from faststream.__about__ import SERVICE_NAME
 from faststream._internal.broker import BrokerConfig
@@ -26,23 +26,15 @@ class KafkaBrokerConfig(BrokerConfig):
 
     client_id: Optional[str] = SERVICE_NAME
 
-    _admin_client: Optional["AIOKafkaAdminClient"] = None
+    _admin_client: Optional["aiokafka.admin.client.AIOKafkaAdminClient"] = None
 
     @property
-    def admin_client(self) -> "AIOKafkaAdminClient":
+    def admin_client(self) -> "aiokafka.admin.client.AIOKafkaAdminClient":
         if self._admin_client is None:
             msg = "Admin client is not initialized. Call connect() first."
             raise IncorrectState(msg)
 
         return self._admin_client
-
-    def __or__(self, value: "BrokerConfig", /) -> "KafkaBrokerConfig":
-        return KafkaBrokerConfig(
-            builder=self.builder,
-            client_id=self.client_id,
-            _admin_client=self._admin_client,
-            **self._merge_configs(value),
-        )
 
     async def connect(self, **connection_kwargs: Any) -> "None":
         producer = aiokafka.AIOKafkaProducer(**connection_kwargs)
@@ -51,7 +43,8 @@ class KafkaBrokerConfig(BrokerConfig):
         admin_options, _ = filter_by_dict(
             AdminClientConnectionParams, connection_kwargs
         )
-        self._admin_client = AIOKafkaAdminClient(**admin_options)
+
+        self._admin_client = aiokafka.admin.client.AIOKafkaAdminClient(**admin_options)
         await self._admin_client.start()
 
         consumer_options, _ = filter_by_dict(

@@ -22,15 +22,6 @@ class NatsBrokerConfig(BrokerConfig):
     kv_declarer: KVBucketDeclarer = field(default_factory=KVBucketDeclarer)
     os_declarer: OSBucketDeclarer = field(default_factory=OSBucketDeclarer)
 
-    def __or__(self, value: "BrokerConfig", /) -> "NatsBrokerConfig":
-        return NatsBrokerConfig(
-            os_declarer=self.os_declarer,
-            kv_declarer=self.kv_declarer,
-            connection_state=self.connection_state,
-            js_producer=self.js_producer,
-            **self._merge_configs(value),
-        )
-
     def connect(self, connection: "Client") -> None:
         stream = connection.jetstream()
 

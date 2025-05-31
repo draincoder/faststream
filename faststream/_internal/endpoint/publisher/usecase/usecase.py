@@ -49,7 +49,7 @@ class PublisherUsecase(PublisherProto[MsgType]):
 
     @property
     def include_in_schema(self) -> bool:
-        return self._outer_config.include_in_schema
+        return self._outer_config.include_in_schema and self.include_in_schema_
 
     @property
     def _producer(self) -> "ProducerProto":

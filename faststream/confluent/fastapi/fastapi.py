@@ -24,7 +24,7 @@ from typing_extensions import Doc, deprecated, override
 from faststream.__about__ import SERVICE_NAME
 from faststream._internal.constants import EMPTY
 from faststream._internal.fastapi.router import StreamRouter
-from faststream.confluent.broker.broker import KafkaBroker as KB
+from faststream.confluent.broker import KafkaBroker as KB
 from faststream.middlewares import AckPolicy
 
 if TYPE_CHECKING:

@@ -55,14 +55,6 @@ class KafkaBrokerConfig(BrokerConfig):
             logger=self.logger,
         )
 
-    def __or__(self, value: "BrokerConfig", /) -> "KafkaBrokerConfig":
-        return KafkaBrokerConfig(
-            client_id=self.client_id,
-            admin=self.admin,
-            connection_config=self.connection_config,
-            **self._merge_configs(value),
-        )
-
     async def connect(self) -> "None":
         native_producer = AsyncConfluentProducer(
             config=self.connection_config,
