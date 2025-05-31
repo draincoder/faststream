@@ -104,7 +104,6 @@ class FastAPITestcase(BaseTestcaseConfig):
             finally:
                 event.set()
 
-        router._setup()
         async with router.broker:
             await router.broker.start()
             await asyncio.wait(
@@ -139,7 +138,6 @@ class FastAPITestcase(BaseTestcaseConfig):
             finally:
                 event.set()
 
-        router._setup()
         async with router.broker:
             await router.broker.start()
             await asyncio.wait(
@@ -197,7 +195,6 @@ class FastAPITestcase(BaseTestcaseConfig):
             if len(data) == 2:
                 event.set()
 
-        router._setup()
         async with router.broker:
             await router.broker.start()
             await asyncio.wait(

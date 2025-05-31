@@ -11,7 +11,7 @@ def test_set_level() -> None:
     app = FastStream(RabbitBroker())
     set_log_level(logging.ERROR, app)
     broker_state = app.broker._state.get()
-    broker_state._setup_logger_state()
+    broker._setup_logger()
     broker_logger = broker_state.logger_state.logger.logger
     assert app.logger.level == broker_logger.level == logging.ERROR
 

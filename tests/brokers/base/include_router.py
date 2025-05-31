@@ -19,7 +19,7 @@ class IncludeTestcase(BaseTestcaseConfig):
         obj = self.get_object(broker)
 
         broker_middlewars = obj._outer_config.broker_middlewares
-        assert broker_middlewars == (1,), broker_middlewars
+        assert tuple(broker_middlewars) == (1,), broker_middlewars
 
     def test_router_middlewares(self) -> None:
         broker = self.get_broker(middlewares=(1,))
@@ -31,7 +31,7 @@ class IncludeTestcase(BaseTestcaseConfig):
         broker.include_router(router)
 
         broker_middlewars = obj._outer_config.broker_middlewares
-        assert broker_middlewars == (1, 2), broker_middlewars
+        assert tuple(broker_middlewars) == (1, 2), broker_middlewars
 
     def test_nested_router_middleware(self) -> None:
         broker = self.get_broker(middlewares=(1,))
@@ -46,7 +46,7 @@ class IncludeTestcase(BaseTestcaseConfig):
         broker.include_router(router)
 
         broker_middlewars = obj._outer_config.broker_middlewares
-        assert broker_middlewars == (1, 2, 3), broker_middlewars
+        assert tuple(broker_middlewars) == (1, 2, 3), broker_middlewars
 
     def test_include_router_with_middlewares(self) -> None:
         broker = self.get_broker(middlewares=(1,))
@@ -58,7 +58,7 @@ class IncludeTestcase(BaseTestcaseConfig):
         broker.include_router(router, middlewares=[2])
 
         broker_middlewars = obj._outer_config.broker_middlewares
-        assert broker_middlewars == (1, 2, 3), broker_middlewars
+        assert tuple(broker_middlewars) == (1, 2, 3), broker_middlewars
 
     @pytest.mark.parametrize(
         ("include_router", "include", "result"),
