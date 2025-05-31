@@ -43,7 +43,9 @@ class TestKafkaBroker(TestBroker[KafkaBroker]):
         fake_producer = FakeProducer(broker)
 
         with ExitStack() as es:
-            es.enter_context(change_producer(broker.config.broker_config, fake_producer))
+            es.enter_context(
+                change_producer(broker.config.broker_config, fake_producer)
+            )
             yield
 
     @staticmethod

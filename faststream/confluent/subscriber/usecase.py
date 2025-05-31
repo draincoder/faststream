@@ -63,6 +63,8 @@ class LogicSubscriber(TasksMixin, SubscriberUsecase[MsgType]):
     @override
     async def start(self) -> None:
         """Start the consumer."""
+        await super().start()
+
         self.consumer = consumer = self._outer_config.builder(
             *self.topics,
             partitions=self.partitions,
