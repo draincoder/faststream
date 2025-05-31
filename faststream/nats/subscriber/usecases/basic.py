@@ -70,6 +70,8 @@ class LogicSubscriber(SubscriberUsecase[MsgType]):
 
     async def start(self) -> None:
         """Create NATS subscription and start consume tasks."""
+        await super().start()
+
         if self.calls:
             await self._create_subscription()
 

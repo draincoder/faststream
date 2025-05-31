@@ -36,12 +36,11 @@ __all__ = ("TestNatsBroker",)
 def change_producer(
     config: "NatsBrokerConfig", producer: "ProducerProto"
 ) -> Generator[None, None, None]:
-    old_producer, config.producer = config.producer, producer
-    old_js_producer, config.js_producer = config.js_producer, producer
+    old_producer, config.broker_config.producer = config.producer, producer
+    old_js_producer, config.broker_config.js_producer = config.js_producer, producer
     yield
-
-    config.producer = old_producer
-    config.js_producer = old_js_producer
+    config.broker_config.producer = old_producer
+    config.broker_config.js_producer = old_js_producer
 
 
 class TestNatsBroker(TestBroker[NatsBroker]):
@@ -73,13 +72,6 @@ class TestNatsBroker(TestBroker[NatsBroker]):
 
         with ExitStack() as es:
             es.enter_context(change_producer(broker.config, fake_producer))
-
-            for s in broker._subscribers:
-                es.enter_context(change_producer(s._outer_config, fake_producer))
-
-            for p in broker._publishers:
-                es.enter_context(change_producer(p._outer_config, fake_producer))
-
             yield
 
     async def _fake_connect(
